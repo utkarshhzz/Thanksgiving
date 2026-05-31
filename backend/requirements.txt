@@ -1,0 +1,33 @@
+# Web framework
+fastapi==0.115.0
+
+# ASGI server (runs FastAPI)
+uvicorn[standard]==0.30.6
+
+# PostgreSQL async driver
+asyncpg==0.29.0
+
+# ORM
+sqlalchemy[asyncio]==2.0.35
+
+# DB migrations
+alembic==1.13.3
+
+# Data validation (comes with FastAPI but pinning for safety)
+pydantic==2.9.2
+pydantic-settings==2.5.2
+
+# Password hashing
+passlib[bcrypt]==1.7.4
+
+# JWT tokens
+python-jose[cryptography]==3.3.0
+
+# Environment variable loading
+python-dotenv==1.0.1
+
+# HTTP form data support (needed for login endpoint)
+python-multipart==0.0.12
+
+# Email validation
+email-validator==2.2.0
