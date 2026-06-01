@@ -26,7 +26,7 @@ from app.db.base import Base
 # Even though we're not using them directly, the import registers them
 # with Base.metadata — which is what Alembic reads.
 # We will add imports here as we create each model:
-# from app.models.user import User
+from app.models.user import User
 # from app.models.organization import Organization
 # from app.models.crowdfunding import Campaign
 # (Leave them commented for now — we have no models yet)
