@@ -1,6 +1,8 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.db.session import engine
+from app.db.base import Base
 
 from app.core.config import settings
 
@@ -11,11 +13,17 @@ async def lifespan(app: FastAPI):
     print(f"Environment: {settings.APP_ENV}")
     print(f"Debug: {settings.DEBUG}")
     
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    print("Database tables verified")
+    
     yield # app runs and serves all requests here
     
+    # await engine.dispose() closing all connections
     # Shutdown-> runs once when server stops
     print(f"Shutting down {settings.APP_NAME} v{settings.APP_VERSION}")
-    
+     print("🛑 Database connections closed. Goodbye.")
+
 app = FastAPI(
     title=settings.APP_NAME,
     description="Social-good platform for crowdfunding, volunteering, in-kind donations and space sharing",
