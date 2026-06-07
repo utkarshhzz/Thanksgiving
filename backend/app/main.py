@@ -3,6 +3,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.db.session import engine
 from app.db.base import Base
+from app.api.v1.api import api_router
+
 
 from app.core.config import settings
 
@@ -22,7 +24,7 @@ async def lifespan(app: FastAPI):
     # await engine.dispose() closing all connections
     # Shutdown-> runs once when server stops
     print(f"Shutting down {settings.APP_NAME} v{settings.APP_VERSION}")
-     print("🛑 Database connections closed. Goodbye.")
+    print("🛑 Database connections closed. Goodbye.")
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -58,3 +60,5 @@ async def health_check():
         "version": settings.APP_VERSION,
         "environment": settings.APP_ENV,
     }
+
+app.include_router(api_router, prefix="/api/v1")

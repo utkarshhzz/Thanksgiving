@@ -7,10 +7,10 @@ from uuid import UUID
 from fastapi import Depends,HTTPException,status
 from fastapi.security import HTTPBearer,HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.models.user import User,UserType
 
 from app.core.security import decode_access_token
 from app.db.session import AsyncSessionLocal
-from app.models.user import User,UserType
 
 bearer_schema=HTTPBearer(auto_error=False)
 # This tells FastAPI to look for: Authorization: Bearer <token>
@@ -82,5 +82,39 @@ async def get_current_active_user(
             detail="This account has been deactivated",
         )
     return current_user
+
+
+def require_roles(*allowed_roles:UserType):
+    """
+    Dependency facotry for role based access control
+    Returns a dependency that checks if the current user has one
+    of the allowed roles. Raises 403 if not.
+    Usage:
+        # Only organizations and admins can create campaigns:
+        @router.post("/campaigns")
+        async def create_campaign(
+            _: None = Depends(require_roles(UserType.ORGANIZATION, UserType.ADMIN)),
+        ):
+            ...
+    Why a factory (function returning a function)?
+    Because Depends() needs a callable. By returning an inner async function,
+    we can parameterize the dependency with different role sets.
+    """
+
+    async def role_checker(
+        current_user: User=Depends(get_current_active_user),
+
+    )-> User:
+        if current_user.user_type not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    f"Access denied. Required roles: "
+                    f"{[r.value for r in allowed_roles]}. "
+                    f"Your role: {current_user.user_type.value}"
+                ),
+            )
+        return current_user
+    return role_checker
 
     
