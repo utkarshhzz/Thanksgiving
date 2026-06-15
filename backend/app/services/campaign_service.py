@@ -2,7 +2,8 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from fastapi import HTTPException,status
-
+from datetime import data
+from app.models.crowdfunding import CampaignStatus,CampaignCategory
 from app.models.crowdfunding import Campaign,CampaignStatus
 from app.models.organization import Organization
 from app.models.user import User
@@ -99,4 +100,101 @@ async def update_campaign(
 
 
 
-# 
+# State machine transitions
+# all valid transitions
+
+VALID_TRANSITIONS:dict[CampaignStatus,set[CampaignStatus]]={
+    CampaignStatus.DRAFT:{
+        CampaignStatus.ACTIVE,
+        CampaignStatus.CANCELLED,
+    },
+    CampaignStatus.ACTIVE: {
+        CampaignStatus.COMPLETED,
+        CampaignStatus.CANCELLED,
+    },
+    CampaignStatus.COMPLETED:{CampaignStatus.CANCELLED,},
+    CampaignStatus.CANCELLED:{CampaignStatus.ARCHIVED,},
+    CampaignStatus.ARCHIVED:set(), #terminal state no exit 
+}
+
+async def transition_campaign_status(
+    db:AsyncSession,
+    campaign_id:uuid.UUID,
+    new_status:CampaignStatus,
+    current_user:User,
+) ->Campaign:
+
+    """
+    Move a capaign from curent status to new status
+    according tio rules
+    1. The transition must be in VALID_TRANSITIONS
+    2. The requesting user must own the organization
+    3. When publishing (DRAFT → ACTIVE), required fields must be present
+    """
+
+    campaign=await get_campaign_by_id(db,campaign_id)
+    if campaign is None:
+        raise HTTPException(status_code=404, detail="Ccmpaign not found")
+
+    # checking ownership
+    org=await db.get(Organization,campaign.organization_id)
+    if org is None or org.owner_id !=current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="You donot have permission to chasnge this campaigns's status"
+        )
+
+    allowed_next_states=VALID_TRANSITIONS.get(campaign.status,set())
+    if new_status not in allowed_next_states:
+        raise HTTPException(
+            status_code=422,
+            detail="Cannot transition as this transition is not allowed",
+        )
+
+    # ── Extra rules for specific transitions ─────────────────────────────────
+    # Rule: Publishing requires complete information
+    if new_status == CampaignStatus.ACTIVE:
+        errors = []
+        if not campaign.title or len(campaign.title.strip()) < 5:
+            errors.append("title must be at least 5 characters")
+        if not campaign.target_amount or campaign.target_amount <= 0:
+            errors.append("target_amount must be greater than zero")
+        if not campaign.end_date:
+            errors.append("end_date is required before publishing")
+        if campaign.end_date and campaign.end_date <= date.today():
+            errors.append("end_date must be in the future")
+        if errors:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Cannot publish campaign. Issues: {', '.join(errors)}",
+            )
+
+
+    # applying the new trasnsition
+    campaign.status=new_status
+    await db.flush()
+    await db.refresh(campaign)
+    return campaign
+
+async def delete_campaign(
+    db:AsyncSession,
+    campaign_id:uuid.UUID,
+    current_user:User,
+)-> None:
+    # Hard delete a campaign only allowed when in DRAFT state
+    campaign=get_campaign_by_id(db,campaign_id)
+    if campaign is None:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+
+    org= await db.get(Organization,campaign.organization_id)
+    if org is None or org.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Permission denied")
+
+
+    if campaign.status != CampaignStatus.DRAFT:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only draft campaigns can be deleted",
+        )
+    await db.delete(campaign)
+    await db.flush()
