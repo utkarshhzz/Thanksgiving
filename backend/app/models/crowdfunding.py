@@ -89,5 +89,8 @@ class Campaign(Base):
     organization: Mapped["Organization"] = relationship(
         "Organization", back_populates="campaigns"
     )
+    donations: Mapped[list["Donation"]] = relationship(
+    "Donation", back_populates="campaign"
+)
     def __repr__(self) -> str:
         return f"<Campaign id={self.id} title={self.title} status={self.status}>"

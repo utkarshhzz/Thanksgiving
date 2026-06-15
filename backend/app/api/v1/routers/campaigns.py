@@ -5,12 +5,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_db, get_current_active_user
 from app.models.crowdfunding import CampaignStatus
 from app.models.user import User
-from app.schemas.campaign import CampaignCreate, CampaignRead, CampaignUpdate
+from app.schemas.campaign import CampaignCreate,CampaignStatusUpdate, CampaignRead, CampaignUpdate
 from app.services.campaign_service import (
     create_campaign,
     get_campaign_by_id,
     list_campaigns,
     update_campaign,
+    transition_campaign_status,
+    delete_campaign,
 )
 
 router=APIRouter(prefix="/campaigns",tags=["Campaigns"])
@@ -66,3 +68,48 @@ async def update_existing_campaign(
 ):
     """Protected endpoint — only the organization owner can update."""
     return await update_campaign(db, campaign_id, update_data, current_user)
+
+
+@router.patch(
+    "/{campaign_id}/status",
+    response_model=CampaignRead,
+    summary="Transition campaign to a new status",
+)
+async def change_campaign_status(
+    campaign_id:uuid.UUID,
+    status_data=CampaignStatusUpdate,
+    db:AsyncSession=Depends(get_db),
+    current_user:User=Depends(get_current_active_user),
+):
+    """Move a campaign through its lifecycle.
+    Valid trnsitions:
+     - DRAFT → ACTIVE (publish — requires title, target_amount, end_date)
+    - DRAFT → CANCELLED
+    - ACTIVE → COMPLETED
+    - ACTIVE → CANCELLED
+    - COMPLETED → ARCHIVED
+    - CANCELLED → ARCHIVED
+    """
+
+    return await transition_campaign_status(db,campaign_id,status_data.status,current_user)
+
+    @router.delete(
+        "/{campaign_id}",
+        status_code=204,
+        summary="Delete  a draft campaign",
+    )
+    async def remove_campaign(
+        campaign_id:uuid.UUID,
+        db:AsyncSession=Depends(get_db),
+        current_user:User=Depends(get_current_active_user),
+        
+    ):
+
+        """
+        Hard delete. Only DRAFT campaigns can be deleted.
+        Published campaigns must be CANCELLED instead.
+        Returns 204 No Content on success (standard for DELETE).
+        """
+        await delete_campaign(db, campaign_id, current_user)
+
+
