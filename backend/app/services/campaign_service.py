@@ -2,12 +2,17 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from fastapi import HTTPException,status
-from datetime import data
+from datetime import data,datetime,timezone,date
+from decimal import Decimal
+from sqlalchemy import func,select
+
 from app.models.crowdfunding import CampaignStatus,CampaignCategory
 from app.models.crowdfunding import Campaign,CampaignStatus
 from app.models.organization import Organization
 from app.models.user import User
 from app.schemas.campaign import CampaignCreate, CampaignUpdate
+from app.models.donation import Donation,TransactionStatus
+from app.schemas.analytics import CampaignAnalytics,DonationBrief
 
 async def get_campaign_by_id(db:AsyncSession,cmpaign_id:uuid.UUID)-> Campaign | None:
     #Fetch asingle campaign by its UUID
@@ -102,6 +107,8 @@ async def update_campaign(
 
 # State machine transitions
 # all valid transitions
+
+
 
 VALID_TRANSITIONS:dict[CampaignStatus,set[CampaignStatus]]={
     CampaignStatus.DRAFT:{
@@ -198,3 +205,65 @@ async def delete_campaign(
         )
     await db.delete(campaign)
     await db.flush()
+
+
+async def get_campaign_analytics(
+    db:AsyncSession,
+    campaign_id:uuid.UUID,
+)-> CampaignAnalytics:
+    """Compute analytics for a given campaign
+    one query per metric
+    """
+    campaign=await get_campaign_by_id(db,campaign_id)
+    if campaign is None:
+        raise HTTPException(status_code=404,detail="Campaign not found")
+
+    agg_result=await db.execute(
+        select(
+            func.count(Donation.id).label("total_count"),
+            func.sum(Donation.amount).label("total_sum"),
+            func.avg(Donation.amount).label("avg_amount"),
+            func.max(Donation.amount).label("max_amount"),
+        ).where(
+            Donation.campaign_id==campaign_id,
+            Donation.transaction_status==TransactionStatus.COMPLETED,
+        )
+    )
+    agg=agg_result.one()  #return a single tuple
+
+    days_remaining=None
+    if campaign.end_date:
+        delta= campaign.end_date - date.today()
+        days_remaining=delta.days
+
+    if campaign.target_amount and campaign.target_amount>0:
+        funding_pct=float(
+            (campaign.raised_amount/campaign.target_amount)*100
+        )
+    else:
+        funding_pct=0.0
+
+    recent_result=await db.execute(
+        select(Donation)
+        .where(
+            Donation.campaign_id==campaign_id,
+            Donation.transaction_status==TransactionStatus.COMPLETED,
+        )
+        .order_by(Donation.created_at.desc())
+        .limit(5)
+    )
+    recent_donations=recent_result.scalars().all()
+    return CampaignAnalytics(
+        campaign_id=campaign.id,
+        title=campaign.title,
+        status=campaign.status,
+        target_amount=campaign.target_amount,
+        raised_amount=campaign.raised_amount,
+        funding_percentage=round(funding_pct, 2),
+        average_donation=agg.avg_amount,
+        largest_donation=agg.max_amount,
+        backer_count=agg.total_count or 0,
+        days_remaining=days_remaining,
+        recent_donations=[DonationBrief.model_validate(d) for d in recent_donations],
+    )
+
