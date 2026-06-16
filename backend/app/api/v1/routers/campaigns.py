@@ -13,7 +13,9 @@ from app.services.campaign_service import (
     update_campaign,
     transition_campaign_status,
     delete_campaign,
+    get_campaign_analytics
 )
+from app.schemas.analytics import CampaignAnalytics
 
 router=APIRouter(prefix="/campaigns",tags=["Campaigns"])
 
@@ -111,5 +113,20 @@ async def change_campaign_status(
         Returns 204 No Content on success (standard for DELETE).
         """
         await delete_campaign(db, campaign_id, current_user)
+
+
+# Ading the analytics endpoint
+
+@router.get(
+    "/{campaign_id}/analytics",
+    response_model=CampaignAnalytics,
+    summary="Get analyticxs for a camaign",
+)
+async def campaign_analytics(
+    campaign_id:uuid.UUID,
+    db:AsyncSession=Depends(get_db),
+):
+    #public endpoint returns fundning progress,stats,no auth needed public campaign data
+    return await get_campaign_analytics(db,campaign_id)
 
 
