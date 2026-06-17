@@ -12,7 +12,6 @@ It is responsible for:
 
 import asyncio
 from logging.config import fileConfig
-
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
@@ -30,6 +29,8 @@ from app.db.base import Base
 from app.models.user import User
 from app.models.organization import Organization
 from app.models.crowdfunding import Campaign
+from app.models.volunteering import VolunteerOpportunity, VolunteerApplication
+
 
 # ─── Alembic Config Object ───────────────────────────────────────────────────
 config = context.config
