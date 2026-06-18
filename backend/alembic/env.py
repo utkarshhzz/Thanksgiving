@@ -16,7 +16,7 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 from app.models.donation import Donation
-
+from app.models.volunteering import HourLog  # already imports VolunteerOpportunity, VolunteerApplication
 from alembic import context
 
 from app.core.config import settings
