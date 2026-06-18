@@ -136,3 +136,84 @@ class VolunteeringApplication(Base):
     __table_args__ = (
         UniqueConstraint("opportunity_id", "volunteer_id", name="uq_application"),
     )
+
+
+
+class LogMethod(str,PyEnum):
+    MANUAL="manual"
+    QR_CHECKIN="qr_checkin"
+
+class VerificationStatus(str,PyEnum):
+    PENDING="pending"
+    VERIFIED="verified"
+    REJECTED="rejected"
+
+class HourLog(Base):
+    # records volunteer hours bfor a specfic opportunity
+    # each row is one volunteering session
+    __tablename__="volunteer_hour_logs"
+    id:Mapped[uuid.UUID]= mapped_column(UUID(as_uuid=True),primary_key=True,default=uuid.uuid4)
+    volunteer_id:Mapped[uuid.UUID]= mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id",ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    opportunity_id:Mapped[uuid.UUID]=mapped_column(UUID(as_uuid=True),
+    ForeignKey("volunteer_opportunities.id",ondelete="CASCADE"),
+    nullable=False,
+    index=True,
+    )
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("organizations.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    # Manual time tracking
+    hours_logged:Mapped[Decimal]=mapped_column(Numeric(6,2),nullable=False)
+    log_date=Mapped[Date]=mapped_column(Date,nullable=False)
+
+    # QR check-in/out timestamps (None for manual logs)
+    check_in_time: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    check_out_time: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    # What the volunteer did during this session
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # ── How this log was created ──────────────────────────────────────────────
+    log_method: Mapped[LogMethod] = mapped_column(
+        Enum(LogMethod),
+        default=LogMethod.MANUAL,
+        nullable=False,
+    )
+    # ── Verification ──────────────────────────────────────────────────────────
+    # QR-based logs start as VERIFIED (system recorded the time — trustworthy).
+    # Manual logs start as PENDING (human reported — needs confirmation).
+    verification_status: Mapped[VerificationStatus] = mapped_column(
+        Enum(VerificationStatus),
+        default=VerificationStatus.PENDING,
+        nullable=False,
+        index=True,
+    )
+    verified_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    verified_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    verification_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+    # Relationships
+    volunteer: Mapped["User"] = relationship("User", foreign_keys=[volunteer_id])
+    opportunity: Mapped["VolunteerOpportunity"] = relationship("VolunteerOpportunity")
+
