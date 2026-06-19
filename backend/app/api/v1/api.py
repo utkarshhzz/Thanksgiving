@@ -10,6 +10,7 @@ from app.api.v1.routers.opportunities import router as opportunities_router
 from app.api.v1.routers.applications import router as applications_router
 from app.api.v1.routers.hours import router as hours_router
 from app.api.v1.routers.impact import router as impact_router
+from app.api.v1.routers.in_kind import router as in_kind_router
 
 
 api_router=APIRouter()
@@ -21,3 +22,4 @@ api_router.include_router(opportunities_router)
 api_router.include_router(applications_router)
 api_router.include_router(hours_router)
 api_router.include_router(impact_router)
+api_router.include_router(in_kind_router)
