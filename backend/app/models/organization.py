@@ -64,8 +64,9 @@ class Organization(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
 
-    campaigns: Mapped[list["Campaign"]]=relationship(
-        "Campaign",back_popultes="organiztion")
+    campaigns: Mapped[list["Campaign"]] = relationship(
+        "Campaign", back_populates="organization"
+    )
 
     
     def __repr__(self) -> str:
