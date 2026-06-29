@@ -19,7 +19,7 @@ from app.schemas.analytics import CampaignAnalytics
 
 router=APIRouter(prefix="/campaigns",tags=["Campaigns"])
 
-@router.get("".response_model=list[CampaignRead],summary="List all Campaigns")
+@router.get("",response_model=list[CampaignRead],summary="List all Campaigns")
 async def get_campaigns(
     skip:int=Query(0,ge=0),
     limit: int = Query(20, ge=1, le=100),
@@ -79,7 +79,7 @@ async def update_existing_campaign(
 )
 async def change_campaign_status(
     campaign_id:uuid.UUID,
-    status_data=CampaignStatusUpdate,
+    status_data:CampaignStatusUpdate,
     db:AsyncSession=Depends(get_db),
     current_user:User=Depends(get_current_active_user),
 ):
@@ -95,24 +95,24 @@ async def change_campaign_status(
 
     return await transition_campaign_status(db,campaign_id,status_data.status,current_user)
 
-    @router.delete(
-        "/{campaign_id}",
-        status_code=204,
-        summary="Delete  a draft campaign",
-    )
-    async def remove_campaign(
-        campaign_id:uuid.UUID,
-        db:AsyncSession=Depends(get_db),
-        current_user:User=Depends(get_current_active_user),
-        
-    ):
+@router.delete(
+    "/{campaign_id}",
+    status_code=204,
+    summary="Delete  a draft campaign",
+)
+async def remove_campaign(
+    campaign_id:uuid.UUID,
+    db:AsyncSession=Depends(get_db),
+    current_user:User=Depends(get_current_active_user),
+    
+):
 
-        """
-        Hard delete. Only DRAFT campaigns can be deleted.
-        Published campaigns must be CANCELLED instead.
-        Returns 204 No Content on success (standard for DELETE).
-        """
-        await delete_campaign(db, campaign_id, current_user)
+    """
+    Hard delete. Only DRAFT campaigns can be deleted.
+    Published campaigns must be CANCELLED instead.
+    Returns 204 No Content on success (standard for DELETE).
+    """
+    await delete_campaign(db, campaign_id, current_user)
 
 
 # Ading the analytics endpoint

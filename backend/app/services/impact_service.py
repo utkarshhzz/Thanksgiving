@@ -14,7 +14,7 @@ from app.models.volunteering import (
 )
 from app.schemas.impact import PlatformImpact, VolunteerImpactCard, OrganizationImpact
 
-async def get_platformimpact(db:AsyncSession)-> PlatformImpact:
+async def get_platform_impact(db:AsyncSession)-> PlatformImpact:
     now=datetime.now(timezone.utc)
 
     # ------------------Crowdfunding stats ---------------------
