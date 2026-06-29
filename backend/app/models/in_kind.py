@@ -1,13 +1,17 @@
 # model for in kind physical item donations
-from app.models.organization import Organization
-from app.models.user import User
+# FIX: Removed 'from app.models.organization import Organization'
+#      and 'from app.models.user import User' from top of file.
+# WHY: SQLAlchemy relationships use STRING references like relationship("Organization")
+#      which are resolved LAZILY at runtime — you don't need to import the class.
+#      Direct imports here risk circular imports:
+#      in_kind → organization → (if organization ever imports in_kind) → loop crash.
 import uuid
-from datetime import datetime,date
+from datetime import datetime, date
 from decimal import Decimal
 from enum import Enum as PyEnum
 
 from sqlalchemy import (
-    String, Text, Date, DateTime, Time, Enum,
+    String, Text, Date, DateTime, Enum,
     ForeignKey, Numeric, Integer, Boolean
 )
 from sqlalchemy.dialects.postgresql import UUID
@@ -51,7 +55,7 @@ class InKindDonation(Base):
         nullable=False,
         index=True,
     )
-     # Which organization receives this donation
+    # Which organization receives this donation
     organization_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("organizations.id", ondelete="CASCADE"),
