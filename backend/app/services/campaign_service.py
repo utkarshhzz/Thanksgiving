@@ -2,7 +2,7 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from fastapi import HTTPException,status
-from datetime import data,datetime,timezone,date
+from datetime import datetime,timezone,date
 from decimal import Decimal
 from sqlalchemy import func,select
 

@@ -20,7 +20,7 @@ class CampaignAnalytics(BaseModel):
     # Compete analytics for a capaign
     campaign_id:uuid.UUID
     title:str
-    status:CampaignStatus.ACTIVE
+    status:CampaignStatus
 
     # Financial metrics
     target_amount:Decimal

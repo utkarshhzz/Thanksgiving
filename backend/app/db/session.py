@@ -20,5 +20,5 @@ AsyncSessionLocal=async_sessionmaker(
     autocommit=False,
     autoflush=False,
     expire_on_commit=False,
-    class=AsyncSession
+    class_=AsyncSession   # Note: class_ not class — 'class' is a Python reserved keyword
 )
