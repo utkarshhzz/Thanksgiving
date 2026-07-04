@@ -129,14 +129,14 @@ async def review_application(
 
     # If approved, increment filled_slots on the opportunity
     if new_status == ApplicationStatus.APPROVED:
-        opp.filled_slots = VolunteerOpportunity.filled_slots + 1
-        # Auto-close if now full
-        if opp.filled_slots >= opp.available_slots:
+        opp.filled_slots = (opp.filled_slots or 0) + 1
+        # Auto-close if now full (compare Python ints, not SQL expressions)
+        if opp.filled_slots >= (opp.available_slots or 0):
             opp.status = OpportunityStatus.CLOSED
 
     # If withdrawing after approval, free up the slot
-    if new_status == ApplicationStatus.WITHDRAWN and app.status == ApplicationStatus.APPROVED:
-        opp.filled_slots = VolunteerOpportunity.filled_slots - 1
+    if new_status == ApplicationStatus.WITHDRAWN and opp.filled_slots > 0:
+        opp.filled_slots = (opp.filled_slots or 0) - 1
 
     await db.flush()
     await db.refresh(app)

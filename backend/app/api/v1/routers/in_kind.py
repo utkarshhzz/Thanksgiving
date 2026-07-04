@@ -30,7 +30,7 @@ async def change_donation_status(
     db:AsyncSession=Depends(get_db),
     current_user:User=Depends(get_current_active_user),
 ):
-    return await update_donation_status(db,donation_id,data,current_user)
+    return await update_donation_status(db,current_user,donation_id,data)
 
 @router.get("/me", response_model=list[InKindRead])
 async def my_donations(

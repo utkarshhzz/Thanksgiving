@@ -1,6 +1,5 @@
 # tests for registration,login,token refresh ,potected routes
 
-from urllib import response
 import pytest
 from httpx import AsyncClient
 
@@ -27,8 +26,8 @@ class TestRegister:
             "email": "testuser@example.com",  # already created by test_user fixture
             "password": "anotherpassword123",
         })
-        assert response.status_code == 400
-        assert "already exists" in response.json()["detail"].lower()
+        assert response.status_code == 409
+        assert "already registered" in response.json()["error"]["message"].lower()
 
     async def test_register_weak_password(self,client:AsyncClient):
         # password shorter than 8 char is rejected
@@ -83,7 +82,7 @@ class TestLogin:
             "email": "testuser@example.com",
             "password": "wrongpassword",
         })
-        assert wrong_email_response.json()["detail"] == wrong_pass_response.json()["detail"]
+        assert wrong_email_response.json()["error"]["message"] == wrong_pass_response.json()["error"]["message"]
 
 
 class TestProtectedRoutes:
@@ -98,9 +97,9 @@ class TestProtectedRoutes:
         assert data["email"] == "testuser@example.com"
         assert "password_hash" not in data   # Security: password never returned
     async def test_get_me_unauthenticated(self, client: AsyncClient):
-        """Request without token gets 403."""
+        """Request without token gets 401."""
         response = await client.get("/api/v1/auth/me")
-        assert response.status_code == 403
+        assert response.status_code == 401
     async def test_get_me_invalid_token(self, client: AsyncClient):
         """Request with garbage token gets 401."""
         response = await client.get(

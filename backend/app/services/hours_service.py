@@ -56,7 +56,7 @@ async def _assert_approved_volunteer(
             VolunteerApplication.status==ApplicationStatus.APPROVED,
         )
     )
-    application=result.scalars.first()
+    application=result.scalars().first()
     if application is None:
         raise HTTPException(
             status_code=403,

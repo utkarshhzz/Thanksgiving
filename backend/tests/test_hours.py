@@ -5,6 +5,7 @@ Tests for: manual hour logging, verification, QR check-in system.
 """
 
 import pytest
+import pytest_asyncio
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -84,7 +85,7 @@ class TestHourLogging:
         )
         assert response.status_code == 201
         data = response.json()
-        assert data["hours_logged"] == "4.5"
+        assert float(data["hours_logged"]) == 4.5   # Decimal serializes as '4.50'
         assert data["verification_status"] == "pending"
         assert data["log_method"] == "manual"
 

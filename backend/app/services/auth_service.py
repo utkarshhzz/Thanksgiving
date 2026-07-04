@@ -1,6 +1,5 @@
 # Business logic for user registration and authentication
 
-from sqlalchemy.dialects.postgresql.asyncpg import AsyncpgJSONIndexType
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -68,7 +67,7 @@ async def authenticate_user(
     if not verify_password(password,user.password_hash):
         return None
 
-    return User
+    return user
 
 
     

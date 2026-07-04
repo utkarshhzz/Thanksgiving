@@ -21,7 +21,7 @@ class DonationRead(BaseModel):
     campaign_id:uuid.UUID
     donor_id:Optional[uuid.UUID]
     amount:Decimal
-    currrency_code:str
+    currency_code: str
     is_anonymous:bool
     donor_message:Optional[str]
     transaction_status:TransactionStatus

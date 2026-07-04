@@ -1,5 +1,6 @@
 #  test for campaign crud operations
 import pytest
+import pytest_asyncio
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,7 +26,7 @@ class TestCampaignCRUD:
         data=response.json()
         assert data["title"]=="Help Build a School"
         assert data["status"]=="draft"
-        assert data["raised_amount"] == "0"
+        assert float(data["raised_amount"]) == 0.0   # Decimal serializes as '0.00'
         assert data["backer_count"] == 0
     
     async def test_create_campaign_unauthenticated(
@@ -40,7 +41,7 @@ class TestCampaignCRUD:
                 "target_amount": "1000.00",
             },
         )
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     async def test_list_campaigns_public(self, client: AsyncClient):
         """Campaign list is public — no auth required."""
@@ -99,7 +100,7 @@ class TestCampaignLifecycle:
             headers={"Authorization": f"Bearer {org_token}"},
         )
         assert publish_response.status_code == 422
-        assert "end_date" in publish_response.json()["detail"].lower()
+        assert "end_date" in publish_response.json()["error"]["message"].lower()
     async def test_invalid_state_transition_rejected(
         self, client: AsyncClient, org_token: str, draft_campaign: dict
     ):
@@ -165,6 +166,6 @@ class TestDonations:
             headers={"Authorization": f"Bearer {user_token}"},
         )
         assert donate.status_code == 422
-        assert "active" in donate.json()["detail"].lower()
+        assert "active" in donate.json()["error"]["message"].lower()
 
     

@@ -14,9 +14,9 @@ from app.schemas.campaign import CampaignCreate, CampaignUpdate
 from app.models.donation import Donation,TransactionStatus
 from app.schemas.analytics import CampaignAnalytics,DonationBrief
 
-async def get_campaign_by_id(db:AsyncSession,cmpaign_id:uuid.UUID)-> Campaign | None:
-    #Fetch asingle campaign by its UUID
-    return await db.get(Campaign,campaign_id)
+async def get_campaign_by_id(db: AsyncSession, campaign_id: uuid.UUID) -> Campaign | None:
+    # Fetch a single campaign by its UUID
+    return await db.get(Campaign, campaign_id)
 
 async def list_campaigns(
     db:AsyncSession,
@@ -70,7 +70,7 @@ async def create_campaign(
         start_date=campaign_data.start_date,
         end_date=campaign_data.end_date,
         is_flexible_funding=campaign_data.is_flexible_funding,
-        status=CampaignStatus.ACTIVE,
+        status=CampaignStatus.DRAFT,   # campaigns always start as draft, never go live immediately
     )
 
     db.add(campaign)
@@ -80,7 +80,7 @@ async def create_campaign(
 
 async def update_campaign(
     db:AsyncSession,
-    Campaign_id:uuid.UUID,
+    campaign_id: uuid.UUID,
     update_data:CampaignUpdate,
     current_user:User,
 )-> Campaign:
@@ -189,7 +189,7 @@ async def delete_campaign(
     current_user:User,
 )-> None:
     # Hard delete a campaign only allowed when in DRAFT state
-    campaign=get_campaign_by_id(db,campaign_id)
+    campaign = await get_campaign_by_id(db, campaign_id)
     if campaign is None:
         raise HTTPException(status_code=404, detail="Campaign not found")
 

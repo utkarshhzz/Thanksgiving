@@ -132,4 +132,4 @@ async def list_org_donations(
     query=query.order_by(InKindDonation.created_at.desc())
 
     result= await db.execute(query)
-    return result.scalars().all
+    return result.scalars().all()

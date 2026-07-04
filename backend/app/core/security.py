@@ -9,7 +9,12 @@ from app.core.config import settings
 # cryptcontext manages password hashing schemes
 # schemes[bcrypt] this is our password hasing scheme
 
-pwd_context=CryptContext(schemes=["bcrypt"],deprecated="auto")
+pwd_context = CryptContext(
+    schemes=["bcrypt"],
+    deprecated="auto",
+    bcrypt__rounds=12,
+    bcrypt__truncate_error=False,
+)
 
 def hash_password(plain_password:str) -> str:
     return pwd_context.hash(plain_password)
