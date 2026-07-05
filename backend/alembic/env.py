@@ -31,7 +31,7 @@ from app.models.organization import Organization
 from app.models.crowdfunding import Campaign
 from app.models.volunteering import VolunteerOpportunity, VolunteerApplication
 from app.models.in_kind import InKindDonation
-
+from app.models.space_sharing import Space, SpaceBooking
 
 # ─── Alembic Config Object ───────────────────────────────────────────────────
 config = context.config
