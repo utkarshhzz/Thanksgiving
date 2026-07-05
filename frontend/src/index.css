@@ -1,0 +1,377 @@
+/* ═══════════════════════════════════════════════════════════
+   THANKSGIVING DESIGN SYSTEM
+   Think of this as your app's "config file" for visuals.
+   All colors, sizes, and spacing are defined here as variables.
+   Use these everywhere — never hardcode colors in component files.
+═══════════════════════════════════════════════════════════ */
+
+/* CSS Variables are declared inside :root — meaning they're
+   available globally across every element in the app */
+:root {
+  /* ── Color Palette ── */
+  /* Primary: Deep violet-purple — premium, trustworthy */
+  --color-primary:        #7c3aed;
+  --color-primary-light:  #a78bfa;
+  --color-primary-dark:   #5b21b6;
+  
+  /* Accent: Warm amber — energy, generosity, warmth */
+  --color-accent:         #f59e0b;
+  --color-accent-light:   #fcd34d;
+  
+  /* Success/Warning/Error */
+  --color-success:        #10b981;
+  --color-warning:        #f59e0b;
+  --color-error:          #ef4444;
+  
+  /* Background — deep space feel */
+  --color-bg:             #050816;   /* Almost black with a blue tint */
+  --color-bg-card:        #0f0f23;   /* Slightly lighter for cards */
+  --color-bg-elevated:    #1a1a3e;   /* Glassmorphism surfaces */
+  
+  /* Text */
+  --color-text:           #e2e8f0;   /* Slightly off-white — easier on eyes */
+  --color-text-muted:     #94a3b8;   /* Secondary text */
+  --color-text-faint:     #475569;   /* Placeholder text */
+  
+  /* Borders — subtle, glassy */
+  --color-border:         rgba(255, 255, 255, 0.08);
+  --color-border-glow:    rgba(124, 58, 237, 0.5);
+  
+  /* ── Typography ── */
+  --font-heading: 'Outfit', sans-serif;    /* Bold, display text */
+  --font-body:    'Inter', sans-serif;     /* Readable, UI text */
+  
+  /* Font sizes — using rem (relative to root, not parent) */
+  --text-xs:   0.75rem;    /* 12px */
+  --text-sm:   0.875rem;   /* 14px */
+  --text-base: 1rem;       /* 16px */
+  --text-lg:   1.125rem;   /* 18px */
+  --text-xl:   1.25rem;    /* 20px */
+  --text-2xl:  1.5rem;     /* 24px */
+  --text-3xl:  1.875rem;   /* 30px */
+  --text-4xl:  2.25rem;    /* 36px */
+  --text-5xl:  3rem;       /* 48px */
+  --text-6xl:  3.75rem;    /* 60px */
+  --text-7xl:  4.5rem;     /* 72px */
+  
+  /* ── Spacing ── */
+  --space-1:  0.25rem;
+  --space-2:  0.5rem;
+  --space-3:  0.75rem;
+  --space-4:  1rem;
+  --space-6:  1.5rem;
+  --space-8:  2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --space-24: 6rem;
+  
+  /* ── Border Radius ── */
+  --radius-sm:   6px;
+  --radius-md:   12px;
+  --radius-lg:   20px;
+  --radius-xl:   32px;
+  --radius-full: 9999px;   /* Perfect circle/pill */
+  
+  /* ── Shadows & Glows ── */
+  --shadow-sm:      0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md:      0 8px 32px rgba(0, 0, 0, 0.4);
+  --shadow-lg:      0 24px 64px rgba(0, 0, 0, 0.5);
+  --glow-primary:   0 0 40px rgba(124, 58, 237, 0.4);
+  --glow-accent:    0 0 40px rgba(245, 158, 11, 0.3);
+  
+  /* ── Transitions ── */
+  --transition-fast:   150ms ease;
+  --transition-base:   250ms ease;
+  --transition-slow:   400ms ease;
+  --transition-spring: 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CSS RESET & BASE STYLES
+   Browsers have their own default styles — we remove them
+   and start from a clean slate.
+═══════════════════════════════════════════════════════════ */
+
+/* box-sizing: border-box means padding/border are INCLUDED in width.
+   Without this: a div with width:100px and padding:20px = 140px wide.
+   With this: it stays 100px. Prevents constant layout math headaches. */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;  /* Prevent horizontal scroll from 3D canvas overflow */
+  
+  /* Custom scrollbar — dark themed */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-primary) transparent;
+}
+
+/* Chrome/Safari scrollbar styling */
+body::-webkit-scrollbar        { width: 6px; }
+body::-webkit-scrollbar-track  { background: transparent; }
+body::-webkit-scrollbar-thumb  { background: var(--color-primary); border-radius: 3px; }
+
+/* Typography defaults */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--color-text);
+}
+
+a {
+  color: var(--color-primary-light);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+a:hover { color: var(--color-accent); }
+
+button { cursor: pointer; border: none; outline: none; font-family: var(--font-body); }
+input, textarea, select {
+  font-family: var(--font-body);
+  outline: none;
+}
+
+img, video { max-width: 100%; display: block; }
+
+/* ═══════════════════════════════════════════════════════════
+   UTILITY CLASSES
+   Reusable single-purpose classes — like Tailwind but ours.
+═══════════════════════════════════════════════════════════ */
+
+/* Layout */
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--space-6);
+}
+
+.section { padding: var(--space-24) 0; }
+
+/* Flex utilities */
+.flex         { display: flex; }
+.flex-col     { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-center  { justify-content: center; }
+.justify-between { justify-content: space-between; }
+.gap-4  { gap: var(--space-4); }
+.gap-6  { gap: var(--space-6); }
+.gap-8  { gap: var(--space-8); }
+
+/* Grid */
+.grid { display: grid; }
+
+/* Text utilities */
+.text-center  { text-align: center; }
+.text-muted   { color: var(--color-text-muted); }
+.text-gradient {
+  /* Gradient text — clips the background to the text shape */
+  background: linear-gradient(135deg, var(--color-primary-light), var(--color-accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   BUTTON SYSTEM
+   Three variants: primary (filled), outline, ghost
+═══════════════════════════════════════════════════════════ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  letter-spacing: 0.025em;
+  transition: all var(--transition-base);
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* The shimmer effect on hover — a pseudo-element slides across */
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+  transition: left var(--transition-slow);
+}
+.btn:hover::before { left: 100%; }
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  color: white;
+  box-shadow: var(--glow-primary);
+}
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 60px rgba(124, 58, 237, 0.6);
+}
+
+.btn-accent {
+  background: linear-gradient(135deg, var(--color-accent), #d97706);
+  color: #0f0f23;
+  font-weight: 700;
+}
+.btn-accent:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--glow-accent);
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--color-border-glow);
+  color: var(--color-primary-light);
+  backdrop-filter: blur(10px);
+}
+.btn-outline:hover {
+  background: rgba(124, 58, 237, 0.15);
+  border-color: var(--color-primary-light);
+  transform: translateY(-2px);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--color-text-muted);
+}
+.btn-ghost:hover { color: var(--color-text); }
+
+.btn-lg { padding: var(--space-4) var(--space-8); font-size: var(--text-base); }
+.btn-sm { padding: var(--space-2) var(--space-4); font-size: var(--text-xs); }
+
+/* ═══════════════════════════════════════════════════════════
+   CARD SYSTEM — Glassmorphism style
+   Glass = frosted blur over the dark background
+═══════════════════════════════════════════════════════════ */
+
+.card {
+  background: rgba(15, 15, 35, 0.6);    /* Semi-transparent dark */
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  backdrop-filter: blur(20px);           /* The frosted glass blur effect */
+  transition: all var(--transition-base);
+}
+
+.card:hover {
+  border-color: rgba(124, 58, 237, 0.3);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg), var(--glow-primary);
+}
+
+.card-glow {
+  box-shadow: var(--glow-primary);
+  border-color: var(--color-border-glow);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FORM SYSTEM
+═══════════════════════════════════════════════════════════ */
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.form-label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  letter-spacing: 0.025em;
+}
+
+.form-input {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  font-size: var(--text-base);
+  transition: all var(--transition-base);
+}
+
+.form-input:focus {
+  border-color: var(--color-primary);
+  background: rgba(124, 58, 237, 0.08);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+}
+
+.form-input::placeholder { color: var(--color-text-faint); }
+
+.form-error {
+  font-size: var(--text-xs);
+  color: var(--color-error);
+  margin-top: var(--space-1);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   BADGE / CHIP (for status labels)
+═══════════════════════════════════════════════════════════ */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.badge-primary { background: rgba(124, 58, 237, 0.2); color: var(--color-primary-light); }
+.badge-success { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+.badge-warning { background: rgba(245, 158, 11, 0.2); color: var(--color-accent-light); }
+.badge-error   { background: rgba(239, 68, 68, 0.2);  color: #f87171; }
+
+/* ═══════════════════════════════════════════════════════════
+   LOADING SPINNER
+═══════════════════════════════════════════════════════════ */
+
+.spinner {
+  width: 40px; height: 40px;
+  border: 3px solid rgba(124, 58, 237, 0.2);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ═══════════════════════════════════════════════════════════
+   PAGE TRANSITION (Framer Motion adds/removes these classes)
+═══════════════════════════════════════════════════════════ */
+
+.page-enter {
+  opacity: 0;
+  transform: translateY(20px);
+}
+.page-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: all 400ms ease;
+}
