@@ -1,17 +1,21 @@
 # endpoint for donations
 import uuid
-from typing import Optional
+from typing import Optional, List
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_db, get_current_active_user
 from app.models.user import User
+from app.models.crowdfunding import Donation
 from app.schemas.donation import DonationCreate, DonationRead, DonationSummary
 from app.services.donation_service import create_donation, get_campaign_donations
 
-router=APIRouter(
+# ── Per-campaign donations ──────────────────────────────────────────────────
+router = APIRouter(
     prefix="/campaigns/{campaign_id}/donations",
     tags=["Donations"],
 )
+
 
 @router.post(
     "",

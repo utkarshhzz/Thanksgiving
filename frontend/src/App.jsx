@@ -18,6 +18,7 @@ import Spaces          from './pages/Spaces.jsx'
 import SpaceDetail     from './pages/SpaceDetail.jsx'
 import ListSpace       from './pages/ListSpace.jsx'
 import MyBookings      from './pages/MyBookings.jsx'
+import Profile         from './pages/Profile.jsx'
 import ProtectedRoute  from './components/ProtectedRoute.jsx'
 
 function App() {
@@ -54,6 +55,7 @@ function App() {
 
           {/* ── Protected ── */}
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/profile"   element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 
           {/* ── 404 → home ── */}
           <Route path="*" element={<Navigate to="/" replace />} />

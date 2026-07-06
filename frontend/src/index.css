@@ -375,3 +375,12 @@ img, video { max-width: 100%; display: block; }
   transform: translateY(0);
   transition: all 400ms ease;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE — Navbar
+═══════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .desktop-nav { display: none !important; }
+
+  .mobile-nav-toggle { display: flex !important; }
+}

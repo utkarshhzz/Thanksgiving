@@ -1,10 +1,24 @@
 import api from './client'
 
+// Real backend URLs (from backend/app/api/v1/routers/opportunities.py + applications.py + hours.py)
+// Opportunities prefix: /opportunities
+// Applications: no prefix (routes like /opportunities/{id}/apply, /applications/me)
+// Hours: no prefix (routes like /hours/log, /hours/me)
+
 export const volunteerApi = {
-  listOpportunities: (params) => api.get('/volunteering/opportunities', { params }),
-  getOpportunity:    (id)     => api.get(`/volunteering/opportunities/${id}`),
-  apply:             (id)     => api.post(`/volunteering/opportunities/${id}/apply`),
-  myApplications:    ()       => api.get('/volunteering/my-applications'),
-  logHours:          (data)   => api.post('/volunteering/hours', data),
-  myHours:           ()       => api.get('/volunteering/my-hours'),
+  // Opportunities
+  listOpportunities: (params) => api.get('/opportunities', { params }),
+  getOpportunity:    (id)     => api.get(`/opportunities/${id}`),
+  createOpportunity: (data)   => api.post('/opportunities', data),
+  updateOpportunity: (id, data) => api.patch(`/opportunities/${id}`, data),
+  publishOpportunity:(id)     => api.patch(`/opportunities/${id}/status`, { status: 'active' }),
+
+  // Applications
+  apply:           (id)     => api.post(`/opportunities/${id}/apply`, {}),
+  myApplications:  ()       => api.get('/applications/me'),
+  updateApplication: (id, status) => api.patch(`/applications/${id}/status`, { status }),
+
+  // Hours
+  logHours:  (data) => api.post('/hours/log', data),
+  myHours:   ()     => api.get('/hours/me'),
 }

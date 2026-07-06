@@ -1,14 +1,17 @@
 # HTTP endpoints for authentication
-from fastapi import APIRouter,Depends,HTTPException,status
+import httpx
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.core.deps import get_db,get_current_active_user
+from app.core.deps import get_db, get_current_active_user
 from app.core.security import create_access_token, create_refresh_token, decode_access_token
+from app.core.config import settings
 from app.models.user import User
-from app.schemas.auth import LoginRequest, TokenResponse, RefreshTokenRequest
+from app.schemas.auth import LoginRequest, TokenResponse, RefreshTokenRequest, GoogleAuthRequest
 from app.schemas.user import UserCreate, UserRead
-from app.services.auth_service import register_user, authenticate_user
+from app.services.auth_service import register_user, authenticate_user, get_or_create_google_user
 
-router=APIRouter(prefix="/auth",tags=["Authentication"])
+router = APIRouter(prefix="/auth", tags=["Authentication"])
+
 
 @router.post("/register",
 response_model=TokenResponse,
@@ -110,7 +113,59 @@ async def refresh_token(
         access_token=new_access_token,
         refresh_token=new_refresh_token,
     )
-# ─── User profile route (lives here for now, will move to users.py later) ────
+
+# ─── Google OAuth ──────────────────────────────────────────────────────────────
+@router.post(
+    "/google",
+    response_model=TokenResponse,
+    summary="Sign in or register with Google",
+)
+async def google_auth(
+    body: GoogleAuthRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Accepts a Google OAuth access_token (from the implicit flow / useGoogleLogin hook).
+    Verifies it by calling Google's userinfo endpoint, then finds or creates the user.
+    """
+    # Verify with Google's userinfo endpoint (works with access_token from implicit flow)
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            "https://www.googleapis.com/oauth2/v3/userinfo",
+            headers={"Authorization": f"Bearer {body.credential}"},
+        )
+
+    if resp.status_code != 200:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Google credential — could not verify with Google.",
+        )
+
+    google_data = resp.json()
+
+    # Extract user info from Google's userinfo response
+    google_id  = google_data.get("sub")
+    email      = google_data.get("email")
+    first_name = google_data.get("given_name", "")
+    last_name  = google_data.get("family_name", "")
+
+    if not google_id or not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Google token missing required fields (sub, email).",
+        )
+
+    user = await get_or_create_google_user(db, google_id, email, first_name, last_name)
+
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="This account has been deactivated.")
+
+    access_token  = create_access_token(subject=str(user.id))
+    refresh_token = create_refresh_token(subject=str(user.id))
+    return TokenResponse(access_token=access_token, refresh_token=refresh_token)
+
+
+# ─── User profile route ────────────────────────────────────────────────────────
 @router.get(
     "/me",
     response_model=UserRead,

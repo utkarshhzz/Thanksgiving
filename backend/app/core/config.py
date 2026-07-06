@@ -19,9 +19,15 @@ class Settings(BaseSettings):
     DB_POOL_SIZE: int=10
     DB_MAX_OVERFLOW: int=20
     
+    # Google OAuth
+    GOOGLE_CLIENT_ID: str = ""
+
+    # Frontend URL (for CORS)
+    FRONTEND_URL: str = "http://localhost:5173"
+
     # CORS
-    ALLOWED_ORIGINS:str="*"
-    ALLOWED_METHODS:str="*"
+    ALLOWED_ORIGINS: str = "http://localhost:5173"
+    ALLOWED_METHODS: str = "*"
     
     model_config= SettingsConfigDict(
         env_file=".env",

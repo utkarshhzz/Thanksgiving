@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime
 from enum import Enum as PyEnum
+from typing import Optional
 
 from sqlalchemy import String,DateTime,Boolean,Enum,Text
 from sqlalchemy.dialects.postgresql import UUID
@@ -30,10 +31,14 @@ class User(Base):
         index=True,
     )
     
-    password_hash:Mapped[str]=mapped_column(
+    password_hash: Mapped[Optional[str]] = mapped_column(
         String(255),
-        nullable=False
+        nullable=True  # Null for Google OAuth users (no password)
     )
+    # OAuth fields
+    oauth_provider: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)  # 'google'
+    oauth_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
+
     # Profile fields
     first_name:Mapped[str | None]=mapped_column(String(100),
                                                 nullable=True)

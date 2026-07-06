@@ -10,7 +10,9 @@ import { useAuthStore } from '../store/authStore'
 // axios.create() makes a pre-configured instance.
 // Every call through this instance automatically uses this baseURL and headers.
 const api = axios.create({
-  baseURL: 'http://localhost:8000/api/v1',  // Your FastAPI backend
+  // In dev: http://localhost:8000/api/v1
+  // In production: set VITE_API_URL in Render dashboard
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1',
 
   // All requests will send/receive JSON.
   headers: { 'Content-Type': 'application/json' },
