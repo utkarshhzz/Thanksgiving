@@ -66,9 +66,15 @@ All errors return a consistent JSON shape:
     lifespan=lifespan,
 )
 register_exception_handlers(app)
+
+# CORS — in production ALLOWED_ORIGINS is set to the exact Render frontend URL
+# e.g. "https://thanksgiving-app.onrender.com"
+# In development it defaults to "http://localhost:5173"
+_origins = [o.strip() for o in settings.ALLOWED_ORIGINS.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for development; restrict in production
+    allow_origins=_origins,
     allow_methods=["*"],
     allow_headers=["*"],
     allow_credentials=True,

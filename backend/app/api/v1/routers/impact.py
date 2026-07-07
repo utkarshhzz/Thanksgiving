@@ -12,8 +12,8 @@ from app.services.impact_service import (
 router=APIRouter(prefix="/impact", tags=["Impact Reports"])
 
 @router.get("/platform", response_model=PlatformImpact)
-async def platform_impact(db:AsyncSession=Depends(get_db)):
-    return await get_platform_impact
+async def platform_impact(db: AsyncSession = Depends(get_db)):
+    return await get_platform_impact(db)  # BUG FIX: was 'get_platform_impact' (reference), not a call
 
 @router.get("/me", response_model=VolunteerImpactCard)
 async def my_impact(

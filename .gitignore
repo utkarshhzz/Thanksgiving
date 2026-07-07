@@ -1,8 +1,54 @@
-docs/
-
+# ── Agent files ───────────────────────────────────────────────────────────────
 *.agent
 .agent*
 
-node_modules/
+# ── Python ────────────────────────────────────────────────────────────────────
 __pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+venv/
+.venv/
+env/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ── Environment variables (NEVER commit these — contain secrets) ───────────────
+.env
+.env.local
+.env.production
+backend/.env
+frontend/.env
+frontend/.env.local
+
+# ── Node / Frontend ───────────────────────────────────────────────────────────
+node_modules/
+frontend/dist/
+frontend/build/
+*.tsbuildinfo
+
+# ── Database / Alembic cache ──────────────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+
+# ── OS files ──────────────────────────────────────────────────────────────────
 .DS_Store
+Thumbs.db
+desktop.ini
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Docs (internal) ───────────────────────────────────────────────────────────
+docs/

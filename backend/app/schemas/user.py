@@ -9,7 +9,7 @@
 import uuid
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, EmailStr, Field, ConfigDict
+from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator
 from app.models.user import UserType
 
 # Base schema shared fields 
@@ -24,7 +24,21 @@ class UserBase(BaseModel):
     
     
 class UserCreate(UserBase):
-    password:str=Field(...,min_length=8,max_length=100)
+    password: str = Field(..., min_length=8, max_length=100)
+
+    @field_validator('user_type', mode='before')
+    @classmethod
+    def block_admin_self_register(cls, v):
+        """
+        Security: nobody can self-register as ADMIN.
+        If someone calls POST /auth/register with user_type="admin"
+        directly via Swagger or a script, we silently downgrade it to INDIVIDUAL.
+        Admin can ONLY be set via the make_admin.py script or /admin/users/{id}/make-admin.
+        """
+        if str(v).lower() == 'admin':
+            return UserType.INDIVIDUAL
+        return v
+
     
 # Update schema used when updating 
 class UserUpdate(BaseModel):

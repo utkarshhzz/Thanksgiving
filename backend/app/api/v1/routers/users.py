@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_db, get_current_active_user
 from app.models.user import User
-from app.models.crowdfunding import Donation
+from app.models.donation import Donation  # Donation is in donation.py, not crowdfunding.py
 from app.schemas.donation import DonationRead
 
 router_me = APIRouter(prefix="/users", tags=["User Donations"])

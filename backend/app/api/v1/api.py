@@ -14,6 +14,7 @@ from app.api.v1.routers.in_kind import router as in_kind_router
 from app.api.v1.routers.organizations import router as organizations_router
 from app.api.v1.routers.spaces import router as spaces_router
 from app.api.v1.routers.users import router_me as users_me_router
+from app.api.v1.routers.admin import router as admin_router
 
 api_router = APIRouter()
 
@@ -28,6 +29,7 @@ api_router.include_router(in_kind_router)
 api_router.include_router(organizations_router)
 api_router.include_router(spaces_router)
 api_router.include_router(users_me_router)
+api_router.include_router(admin_router)
 
 
 
