@@ -63,4 +63,5 @@ class UserBrief(BaseModel):
     last_name: Optional[str]
     user_type: UserType
     model_config = ConfigDict(from_attributes=True)
-
+
+
