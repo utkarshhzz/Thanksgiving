@@ -18,11 +18,18 @@ build/
 
 # ── Environment variables (NEVER commit these — contain secrets) ───────────────
 .env
+.env.*
 .env.local
+.env.test
 .env.production
+.env.*.local
 backend/.env
+backend/.env.*
 frontend/.env
+frontend/.env.*
 frontend/.env.local
+**/.env           # catch .env in any subdirectory
+**/.env.*         # catch .env.test, .env.local etc in any subdirectory
 
 # ── Node / Frontend ───────────────────────────────────────────────────────────
 node_modules/
