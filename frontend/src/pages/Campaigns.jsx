@@ -62,11 +62,42 @@ function CampaignCard({ campaign, index }) {
         flexDirection:  'column',
       }}
     >
-      {/* Card top-color stripe */}
-      <div style={{
-        height:     '4px',
-        background: `linear-gradient(90deg, ${statusColor}, transparent)`,
-      }} />
+      {/* Campaign image or gradient placeholder */}
+      {campaign.image_url ? (
+        <img
+          src={campaign.image_url}
+          alt={campaign.title}
+          style={{
+            width:      '100%',
+            height:     '160px',
+            objectFit: 'cover',
+            display:    'block',
+            flexShrink: 0,
+          }}
+        />
+      ) : (
+        <div style={{
+          width:          '100%',
+          height:         '160px',
+          background:     `linear-gradient(135deg, ${statusColor}22, rgba(245,158,11,0.12))`,
+          display:        'flex',
+          alignItems:     'center',
+          justifyContent: 'center',
+          fontSize:       '2.5rem',
+          flexShrink:     0,
+          position:       'relative',
+          overflow:       'hidden',
+        }}>
+          {/* subtle top accent line */}
+          <div style={{
+            position:   'absolute',
+            top: 0, left: 0, right: 0,
+            height:     '3px',
+            background: `linear-gradient(90deg, ${statusColor}, transparent)`,
+          }} />
+          {'💰📚🏥🌱🏘️🆘'.split('').find((_, i) => i === ['FUNDRAISER','EDUCATION','HEALTHCARE','ENVIRONMENT','COMMUNITY','DISASTER_RELIEF'].indexOf(campaign.campaign_type)) || '💜'}
+        </div>
+      )}
 
       <div style={{ padding: '1.5rem', flexGrow: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
         {/* Status + type badges */}

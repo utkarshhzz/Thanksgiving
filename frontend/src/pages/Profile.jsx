@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 
 import Navbar from '../components/Navbar.jsx'
+import ImageUpload from '../components/ImageUpload.jsx'
 import { authApi } from '../api/auth'
 import { useAuthStore } from '../store/authStore'
 
@@ -14,9 +15,10 @@ function getInitials(first, last) {
 }
 
 function Profile() {
-  const [profile, setProfile] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [editing, setEditing] = useState(false)
+  const [profile, setProfile]               = useState(null)
+  const [loading, setLoading]               = useState(true)
+  const [editing, setEditing]               = useState(false)
+  const [showAvatarUpload, setShowAvatarUpload] = useState(false)
   const updateUserStore = useAuthStore(s => s.updateUser)
   const storeUser       = useAuthStore(s => s.user)
 
@@ -38,16 +40,21 @@ function Profile() {
   }, [])
 
   const onSave = async (data) => {
-    // For now we use the /auth/me endpoint to re-fetch — a PATCH /users/me
-    // endpoint can be added later. We optimistically update the store.
     try {
-      // Update store so Navbar reflects new name immediately
-      updateUserStore({ ...storeUser, ...data })
-      setProfile(prev => ({ ...prev, ...data }))
+      // PATCH /users/me — persists changes to the database
+      const res = await authApi.updateMe(data)
+      updateUserStore({ ...storeUser, ...res.data })
+      setProfile(res.data)
+      reset({
+        first_name: res.data.first_name || '',
+        last_name:  res.data.last_name  || '',
+        phone:      res.data.phone       || '',
+        bio:        res.data.bio         || '',
+      })
       setEditing(false)
-      toast.success('Profile updated!')
+      toast.success('Profile updated! ✨')
     } catch {
-      toast.error('Update failed.')
+      toast.error('Update failed. Please try again.')
     }
   }
 
@@ -64,22 +71,55 @@ function Profile() {
       <Navbar />
 
       <div style={{ maxWidth: '700px', margin: '0 auto', padding: '6rem 1.5rem 4rem' }}>
-        {/* Avatar + name header */}
+
+        {/* ── Avatar + name header ── */}
         <motion.div
           initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
-          style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '2.5rem', flexWrap: 'wrap' }}
+          style={{ display: 'flex', alignItems: 'flex-start', gap: '1.5rem', marginBottom: '2rem', flexWrap: 'wrap' }}
         >
-          {/* Avatar circle with initials */}
-          <div style={{
-            width: '80px', height: '80px', borderRadius: '50%',
-            background: `linear-gradient(135deg, ${avatarColor}, ${avatarColor}88)`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '1.8rem', fontWeight: 800, fontFamily: 'var(--font-heading)',
-            color: 'white', flexShrink: 0, border: '3px solid rgba(255,255,255,0.15)',
-          }}>
-            {getInitials(profile?.first_name, profile?.last_name)}
+          {/* Avatar with camera overlay */}
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            {profile?.avatar_url ? (
+              <img
+                src={profile.avatar_url}
+                alt="Profile"
+                style={{
+                  width: '80px', height: '80px', borderRadius: '50%',
+                  objectFit: 'cover', border: '3px solid rgba(124,58,237,0.4)',
+                  display: 'block',
+                }}
+              />
+            ) : (
+              <div style={{
+                width: '80px', height: '80px', borderRadius: '50%',
+                background: `linear-gradient(135deg, ${avatarColor}, ${avatarColor}88)`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '1.8rem', fontWeight: 800, fontFamily: 'var(--font-heading)',
+                color: 'white', border: '3px solid rgba(255,255,255,0.15)',
+              }}>
+                {getInitials(profile?.first_name, profile?.last_name)}
+              </div>
+            )}
+
+            {/* Camera icon — click to show upload box */}
+            <button
+              onClick={() => setShowAvatarUpload(v => !v)}
+              title="Change profile photo"
+              style={{
+                position: 'absolute', bottom: 0, right: 0,
+                width: '26px', height: '26px', borderRadius: '50%',
+                background: 'var(--color-primary)', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '0.65rem', border: '2px solid rgba(0,0,0,0.6)',
+                color: 'white', lineHeight: 1,
+              }}
+            >
+              📷
+            </button>
           </div>
-          <div>
+
+          {/* Name + badges */}
+          <div style={{ flexGrow: 1 }}>
             <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 900, fontSize: '1.8rem', marginBottom: '0.25rem' }}>
               {profile?.first_name} {profile?.last_name}
             </h1>
@@ -104,16 +144,50 @@ function Profile() {
               )}
             </div>
           </div>
+
           <button
             className="btn btn-ghost"
-            style={{ marginLeft: 'auto' }}
+            style={{ marginLeft: 'auto', flexShrink: 0 }}
             onClick={() => setEditing(!editing)}
           >
             {editing ? 'Cancel' : '✏️ Edit'}
           </button>
         </motion.div>
 
-        {/* Info or edit form */}
+        {/* ── Avatar upload panel (collapses in/out) ── */}
+        <AnimatePresence>
+          {showAvatarUpload && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              style={{ overflow: 'hidden', marginBottom: '1.5rem' }}
+            >
+              <div className="card" style={{ padding: '1.25rem' }}>
+                <p style={{
+                  fontWeight: 600, fontSize: '0.8rem',
+                  color: 'var(--color-text-muted)', textTransform: 'uppercase',
+                  letterSpacing: '0.05em', marginBottom: '1rem',
+                }}>
+                  Change Profile Photo
+                </p>
+                <ImageUpload
+                  uploadUrl="/users/me/avatar"
+                  currentUrl={profile?.avatar_url}
+                  label="Upload Profile Photo"
+                  onUploaded={(url) => {
+                    setProfile(prev => ({ ...prev, avatar_url: url }))
+                    updateUserStore({ ...storeUser, avatar_url: url })
+                    setShowAvatarUpload(false)
+                    toast.success('Profile photo updated! 📸')
+                  }}
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── Info or edit form ── */}
         {!editing ? (
           <motion.div
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
@@ -124,10 +198,10 @@ function Profile() {
             </h2>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
               {[
-                { label: 'First Name',  value: profile?.first_name || '—' },
-                { label: 'Last Name',   value: profile?.last_name  || '—' },
-                { label: 'Phone',       value: profile?.phone      || '—' },
-                { label: 'Member Since',value: profile?.created_at
+                { label: 'First Name',   value: profile?.first_name || '—' },
+                { label: 'Last Name',    value: profile?.last_name  || '—' },
+                { label: 'Phone',        value: profile?.phone      || '—' },
+                { label: 'Member Since', value: profile?.created_at
                   ? new Date(profile.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
                   : '—' },
               ].map(({ label, value }) => (
@@ -174,9 +248,14 @@ function Profile() {
               <label className="form-label">Bio</label>
               <textarea className="form-input" rows={3} placeholder="Tell us about yourself..." {...register('bio')} style={{ resize: 'vertical' }} />
             </div>
-            <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-              {isSubmitting ? 'Saving...' : 'Save Changes'}
-            </button>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button type="button" className="btn btn-ghost" onClick={() => setEditing(false)} style={{ flex: 1 }}>
+                Cancel
+              </button>
+              <button type="submit" className="btn btn-primary" disabled={isSubmitting} style={{ flex: 2 }}>
+                {isSubmitting ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
           </motion.form>
         )}
       </div>

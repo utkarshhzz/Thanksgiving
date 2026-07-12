@@ -157,38 +157,41 @@ function Dashboard() {
   })
 
   // Load stats on mount — fire all 4 requests in parallel with Promise.all
-  useEffect(() => {
-    const load = async () => {
-      try {
-        // Promise.allSettled: runs all promises, doesn't fail if one fails.
-        // Each result is { status: 'fulfilled'|'rejected', value|reason }
-        const [campaigns, hours, donations, spaces] = await Promise.allSettled([
-          campaignApi.list(),
-          volunteerApi.myHours(),
-          inKindApi.myOffers(),
-          spacesApi.myBookings(),
-        ])
+  // NEW — correct APIs, correct data fields
+useEffect(() => {
+  const load = async () => {
+    try {
+      const [hours, offers, bookings] = await Promise.allSettled([
+        volunteerApi.myHours(),   // my logged volunteer hours (array of entries)
+        inKindApi.myOffers(),     // my in-kind donation offers
+        spacesApi.myBookings(),   // my space bookings
+      ])
 
-        setStats({
-          campaigns: campaigns.status === 'fulfilled'
-            ? campaigns.value.data?.length ?? 0
-            : '—',
-          hours: hours.status === 'fulfilled'
-            ? hours.value.data?.length ?? 0
-            : '—',
-          donations: donations.status === 'fulfilled'
-            ? donations.value.data?.length ?? 0
-            : '—',
-          spaces: spaces.status === 'fulfilled'
-            ? spaces.value.data?.length ?? 0
-            : '—',
-        })
-      } catch {
-        // silently ignore — stats just show dashes
-      }
+      setStats({
+        // Sum total hours_logged from all entries
+        hours: hours.status === 'fulfilled'
+          ? hours.value.data?.reduce((sum, h) => sum + (h.hours_logged ?? 0), 0) ?? 0
+          : '—',
+        // Count of in-kind offers
+        donations: offers.status === 'fulfilled'
+          ? offers.value.data?.length ?? 0
+          : '—',
+        // Count of space bookings
+        spaces: bookings.status === 'fulfilled'
+          ? bookings.value.data?.length ?? 0
+          : '—',
+        // Impact score — derived from hours (simple formula)
+        campaigns: hours.status === 'fulfilled'
+          ? Math.round((hours.value.data?.reduce((s, h) => s + (h.hours_logged ?? 0), 0) ?? 0) * 10)
+          : '—',
+      })
+    } catch {
+      // silently ignore — stats just show dashes
     }
-    load()
-  }, [])
+  }
+  load()
+}, [])
+
 
   const modules = [
     {
@@ -291,10 +294,10 @@ function Dashboard() {
           gap:                 '1rem',
           marginBottom:        '2.5rem',
         }}>
-          <StatCard icon="💰" label="Active Campaigns"   value={stats.campaigns} color="#7c3aed" delay={0.1} />
-          <StatCard icon="⏱️" label="Hours Logged"       value={stats.hours}     color="#10b981" delay={0.15} />
-          <StatCard icon="📦" label="Goods Offered"      value={stats.donations} color="#f59e0b" delay={0.2} />
-          <StatCard icon="📅" label="Space Bookings"     value={stats.spaces}    color="#a78bfa" delay={0.25} />
+          <StatCard icon="⏱️" label="Hours Volunteered" value={stats.hours}     color="#10b981" delay={0.1} />
+          <StatCard icon="📦" label="Goods Offered"      value={stats.donations} color="#f59e0b" delay={0.15} />
+          <StatCard icon="📅" label="Space Bookings"     value={stats.spaces}    color="#a78bfa" delay={0.2} />
+          <StatCard icon="💜" label="Impact Score"       value={stats.campaigns} color="#7c3aed" delay={0.25} />
         </div>
 
         {/* ── Module cards ── */}

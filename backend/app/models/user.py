@@ -46,6 +46,8 @@ class User(Base):
                                                 nullable=True)
     phone:Mapped[str | None]=mapped_column(String(20),nullable=True)
     bio:Mapped[str | None]=mapped_column(Text,nullable=True)
+    # cloudinary uplaoding the avatar
+    avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     
     # Role/Type
     

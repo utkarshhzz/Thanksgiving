@@ -19,11 +19,12 @@ function MyApplications() {
   const [filter, setFilter]   = useState('all')
 
   useEffect(() => {
-    volunteerApi.myApplications()
-      .then(res => setApps(res.data))
-      .catch(() => setApps([]))
+    volunteerApi.myApplications()    // GET /api/v1/applications/mine
+      .then(res => setApplications(res.data ?? []))
+      .catch(() => setApplications([]))
       .finally(() => setLoading(false))
   }, [])
+
 
   const statuses = ['all', ...new Set(apps.map(a => a.status))]
   const filtered = filter === 'all' ? apps : apps.filter(a => a.status === filter)

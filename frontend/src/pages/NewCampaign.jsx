@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { motion } from 'framer-motion'
+import ImageUpload from '../components/ImageUpload.jsx'
 
 import Navbar from '../components/Navbar.jsx'
 import { campaignApi } from '../api/campaigns'
@@ -21,6 +22,8 @@ function NewCampaign() {
   })
   const [serverError, setServerError] = useState(null)
   const [created, setCreated]         = useState(null)
+  const [campaignId, setCampaignId] = useState(null)
+
   const navigate = useNavigate()
 
   const selectedType = watch('campaign_type')
@@ -37,6 +40,7 @@ function NewCampaign() {
       }
       const res = await campaignApi.create(payload)
       setCreated(res.data)
+      setCampaignId(res.data.id)  // save so ImageUpload knows where to upload
     } catch (err) {
       setServerError(
         err.response?.data?.error?.message || 'Could not create campaign.'
@@ -44,7 +48,7 @@ function NewCampaign() {
     }
   }
 
-  // Success state — show next-step options
+  // Success state — show image uploader then navigate
   if (created) {
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -55,27 +59,51 @@ function NewCampaign() {
         }}>
           <motion.div
             className="card card-glow"
-            style={{ maxWidth: '480px', width: '100%', textAlign: 'center', padding: '3rem 2rem' }}
-            initial={{ scale: 0.9 }}
-            animate={{ scale: 1 }}
+            style={{ maxWidth: '520px', width: '100%', padding: '2.5rem 2rem' }}
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
             transition={{ type: 'spring', damping: 15 }}
           >
-            <div style={{ fontSize: '3.5rem', marginBottom: '1rem' }}>🎉</div>
-            <h2 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.6rem', marginBottom: '0.5rem' }}>
-              Campaign Created!
-            </h2>
-            <p style={{ color: 'var(--color-text-muted)', marginBottom: '0.5rem' }}>
-              <strong style={{ color: 'var(--color-text)' }}>{created.title}</strong>
-            </p>
-            <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', marginBottom: '2rem' }}>
-              Your campaign is saved as a <strong>Draft</strong>. Publish it to start receiving donations.
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {/* ── Header ── */}
+            <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>🎉</div>
+              <h2 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.5rem', marginBottom: '0.4rem' }}>
+                Campaign Created!
+              </h2>
+              <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
+                <strong style={{ color: 'var(--color-text)' }}>{created.title}</strong>
+              </p>
+              <p style={{ color: 'var(--color-text-muted)', fontSize: '0.82rem', marginTop: '0.4rem' }}>
+                Saved as a <strong>Draft</strong>. Add a cover image to make it stand out.
+              </p>
+            </div>
+
+            {/* ── Image uploader ── */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <p style={{
+                fontWeight: 600, fontSize: '0.85rem',
+                marginBottom: '0.75rem', color: 'var(--color-text-muted)',
+                textTransform: 'uppercase', letterSpacing: '0.05em',
+              }}>
+                Cover Image (optional)
+              </p>
+              <ImageUpload
+                uploadUrl={`/campaigns/${created.id}/upload-image`}
+                label="Campaign Cover Photo"
+                onUploaded={() => {
+                  // Image saved — navigate to the new campaign page
+                  navigate(`/campaigns/${created.id}`)
+                }}
+              />
+            </div>
+
+            {/* ── Skip + go now ── */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
               <Link to={`/campaigns/${created.id}`} className="btn btn-primary">
                 View & Publish Campaign →
               </Link>
-              <Link to="/campaigns" className="btn btn-ghost">
-                Browse All Campaigns
+              <Link to="/campaigns" className="btn btn-ghost" style={{ fontSize: '0.85rem' }}>
+                Skip — Browse All Campaigns
               </Link>
             </div>
           </motion.div>

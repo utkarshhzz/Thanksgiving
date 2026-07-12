@@ -20,4 +20,14 @@ export const campaignApi = {
   listDonations:   (id)          => api.get(`/campaigns/${id}/donations`),
   // "My donations" — returns all donations I have made
   myDonations: () => api.get('/users/me/donations'),
+
+  // Razorpay payment flow
+  // Step 1: backend creates a Razorpay order, returns order_id + key_id
+  createPaymentOrder: (id, amount) =>
+    api.post(`/campaigns/${id}/payment/create-order`, { amount }),
+
+  // Step 2: after user pays in popup, send proof to backend for verification + DB save
+  verifyPayment: (id, data) =>
+    api.post(`/campaigns/${id}/payment/verify`, data),
 }
+

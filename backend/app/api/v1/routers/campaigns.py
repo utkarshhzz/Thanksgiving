@@ -1,11 +1,13 @@
 import uuid
-from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+import hmac
+import hashlib
+from typing import Optional, Any
+from fastapi import APIRouter, Depends, HTTPException, status, Query, File, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_db, get_current_active_user
-from app.models.crowdfunding import CampaignStatus
+from app.models.crowdfunding import Campaign, CampaignStatus
 from app.models.user import User
-from app.schemas.campaign import CampaignCreate,CampaignStatusUpdate, CampaignRead, CampaignUpdate
+from app.schemas.campaign import CampaignCreate, CampaignStatusUpdate, CampaignRead, CampaignUpdate
 from app.services.campaign_service import (
     create_campaign,
     get_campaign_by_id,
@@ -16,6 +18,9 @@ from app.services.campaign_service import (
     get_campaign_analytics
 )
 from app.schemas.analytics import CampaignAnalytics
+from app.services.upload_service import upload_image
+from app.core.config import settings
+
 
 router=APIRouter(prefix="/campaigns",tags=["Campaigns"])
 
@@ -130,3 +135,147 @@ async def campaign_analytics(
     return await get_campaign_analytics(db,campaign_id)
 
 
+@router.post("/{campaign_id}/upload-image")
+async def upload_campaign_image(
+    campaign_id: uuid.UUID,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Upload a cover image for a campaign. Saves URL to the campaign record."""
+    campaign = await db.get(Campaign, campaign_id)
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+
+    image_url = await upload_image(file=file, folder="campaigns", public_id=str(campaign_id))
+
+    campaign.image_url = image_url
+    await db.flush()
+    return {"image_url": image_url}
+
+
+# ── Razorpay payment endpoints ────────────────────────────────────────────────
+
+@router.post(
+    "/{campaign_id}/payment/create-order",
+    summary="Create a Razorpay order for a donation",
+)
+async def create_payment_order(
+    campaign_id: uuid.UUID,
+    body: dict[str, Any],
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Step 1 of the payment flow.
+    Creates a Razorpay order and returns the order_id needed by the frontend
+    to open the checkout popup.
+
+    Frontend sends: { "amount": 500 }  (in rupees)
+    Backend returns: { "order_id": "order_xxx", "amount": 50000, "currency": "INR", "key_id": "rzp_test_..." }
+    """
+    if not settings.RAZORPAY_KEY_ID or not settings.RAZORPAY_KEY_SECRET:
+        raise HTTPException(
+            status_code=503,
+            detail="Payment gateway not configured. Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to .env"
+        )
+
+    campaign = await db.get(Campaign, campaign_id)
+    if not campaign or campaign.status != CampaignStatus.ACTIVE:
+        raise HTTPException(status_code=404, detail="Campaign not found or not active")
+
+    amount_rupees = float(body.get("amount", 0))
+    if amount_rupees <= 0:
+        raise HTTPException(status_code=400, detail="Amount must be positive")
+
+    amount_paise = int(amount_rupees * 100)  # Razorpay uses smallest currency unit (paise)
+
+    try:
+        import razorpay
+        rzp = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+        order = rzp.order.create({
+            "amount": amount_paise,
+            "currency": "INR",
+            "receipt": f"camp_{str(campaign_id)[:8]}_{str(current_user.id)[:8]}",
+            "notes": {
+                "campaign_id": str(campaign_id),
+                "user_id": str(current_user.id),
+            }
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Razorpay order creation failed: {str(e)}")
+
+    return {
+        "order_id":  order["id"],
+        "amount":    amount_paise,
+        "currency": "INR",
+        "key_id":   settings.RAZORPAY_KEY_ID,  # frontend needs this to initialise the popup
+    }
+
+
+@router.post(
+    "/{campaign_id}/payment/verify",
+    summary="Verify Razorpay payment and record donation",
+)
+async def verify_payment(
+    campaign_id: uuid.UUID,
+    body: dict[str, Any],
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Step 2 of the payment flow.
+    Verifies the Razorpay HMAC-SHA256 signature to confirm the payment is genuine
+    (not tampered with), then saves the donation to the database.
+
+    Frontend sends:
+    {
+      "razorpay_order_id":   "order_xxx",
+      "razorpay_payment_id": "pay_xxx",
+      "razorpay_signature":  "abc123...",
+      "amount":              50000   (paise)
+    }
+    """
+    required = ["razorpay_order_id", "razorpay_payment_id", "razorpay_signature", "amount"]
+    missing = [k for k in required if k not in body]
+    if missing:
+        raise HTTPException(status_code=422, detail=f"Missing fields: {missing}")
+
+    # Cryptographic signature check — proves Razorpay generated this payment
+    key_secret = settings.RAZORPAY_KEY_SECRET.encode()
+    msg = f"{body['razorpay_order_id']}|{body['razorpay_payment_id']}".encode()
+    expected = hmac.new(key_secret, msg, hashlib.sha256).hexdigest()
+
+    if expected != body["razorpay_signature"]:
+        raise HTTPException(status_code=400, detail="Invalid payment signature — possible tampering")
+
+    # Save donation using existing service
+    from app.services.donation_service import create_donation
+    from app.schemas.donation import DonationCreate
+
+    amount_rupees = float(body["amount"]) / 100  # convert paise → rupees
+    donation = await create_donation(
+        db=db,
+        campaign_id=campaign_id,
+        donation_data=DonationCreate(amount=amount_rupees),
+        current_user=current_user,
+    )
+
+    # Fire email notification in background (non-blocking)
+    try:
+        from app.services.email_service import send_donation_notification
+        import asyncio
+        campaign = await db.get(Campaign, campaign_id)
+        if campaign and hasattr(campaign, 'organization') and campaign.organization:
+            asyncio.create_task(send_donation_notification(
+                org_email=campaign.organization.owner.email,
+                org_name=campaign.organization.name,
+                donor_name=f"{current_user.first_name or ''} {current_user.last_name or ''}".strip() or "A donor",
+                amount=amount_rupees,
+                campaign_title=campaign.title,
+                campaign_url=f"{settings.FRONTEND_URL}/campaigns/{campaign_id}",
+            ))
+    except Exception:
+        pass  # Email failure must never block the payment confirmation
+
+    return {"success": True, "donation_id": str(donation.id), "amount": amount_rupees}

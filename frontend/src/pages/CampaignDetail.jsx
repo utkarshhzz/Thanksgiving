@@ -23,14 +23,57 @@ function DonateModal({ campaign, onClose, onSuccess }) {
 
     setLoading(true); setError(null)
     try {
-      await campaignApi.donate(campaign.id, num)
-      onSuccess(num)
+      // Try Razorpay payment flow first
+      const orderRes = await campaignApi.createPaymentOrder(campaign.id, num)
+      const { order_id, key_id, amount: amountPaise } = orderRes.data
+
+      // Open Razorpay checkout popup (loaded via index.html script tag)
+      const rzp = new window.Razorpay({
+        key:         key_id,
+        order_id:    order_id,
+        amount:      amountPaise,
+        currency:    'INR',
+        name:        'ThankGiving',
+        description: campaign.title,
+        image:       campaign.image_url || '',
+        theme:       { color: '#7c3aed' },
+        prefill:     {},  // user details auto-filled by Razorpay from their account
+        handler: async (response) => {
+          // Payment complete — verify with backend + save donation
+          try {
+            await campaignApi.verifyPayment(campaign.id, {
+              razorpay_order_id:   response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature:  response.razorpay_signature,
+              amount:              amountPaise,
+            })
+            onSuccess(num)
+          } catch {
+            setError('Payment verified but donation recording failed. Contact support.')
+          }
+        },
+        modal: {
+          ondismiss: () => setLoading(false),   // user closed popup without paying
+        },
+      })
+      rzp.open()
     } catch (err) {
-      setError(err.response?.data?.error?.message || 'Donation failed')
-    } finally {
-      setLoading(false)
+      // If backend returns 503 (Razorpay not configured), fall back to direct donate
+      if (err.response?.status === 503) {
+        try {
+          await campaignApi.donate(campaign.id, num)
+          onSuccess(num)
+        } catch (fallbackErr) {
+          setError(fallbackErr.response?.data?.error?.message || 'Donation failed')
+          setLoading(false)
+        }
+      } else {
+        setError(err.response?.data?.detail || err.response?.data?.error?.message || 'Payment failed')
+        setLoading(false)
+      }
     }
   }
+
 
   return (
     // Backdrop
@@ -185,6 +228,25 @@ function CampaignDetail() {
             {campaign.status}
           </span>
         </div>
+
+        {/* Campaign cover image (only rendered if uploaded) */}
+        {campaign.image_url && (
+          <motion.img
+            src={campaign.image_url}
+            alt={campaign.title}
+            initial={{ opacity: 0, scale: 1.02 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+            style={{
+              width:        '100%',
+              height:       '300px',
+              objectFit:    'cover',
+              borderRadius: '20px',
+              marginBottom: '1.5rem',
+              display:      'block',
+            }}
+          />
+        )}
 
         <h1 style={{
           fontFamily:   'var(--font-heading)',

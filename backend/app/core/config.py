@@ -22,12 +22,25 @@ class Settings(BaseSettings):
     # Google OAuth
     GOOGLE_CLIENT_ID: str = ""
 
+    # Cloudinary image uploads
+    CLOUDINARY_CLOUD_NAME: str = ""
+    CLOUDINARY_API_KEY: str = ""
+    CLOUDINARY_API_SECRET: str = ""
+
+    # Email — Resend (free 100/day, signup at resend.com)
+    RESEND_API_KEY: str = ""
+
+    # Payments — Razorpay (signup at razorpay.com, use test keys)
+    RAZORPAY_KEY_ID: str = ""
+    RAZORPAY_KEY_SECRET: str = ""
+
     # Frontend URL (for CORS)
     FRONTEND_URL: str = "http://localhost:5173"
 
     # CORS
     ALLOWED_ORIGINS: str = "http://localhost:5173"
     ALLOWED_METHODS: str = "*"
+
     
     model_config= SettingsConfigDict(
         env_file=".env",
