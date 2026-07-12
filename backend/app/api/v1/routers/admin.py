@@ -165,7 +165,7 @@ async def recent_campaigns(
             "title":      c.title,
             "status":     c.status,
             "goal":       float(c.target_amount or 0),
-            "raised":     float(c.current_amount or 0),
+            "raised":     float(c.raised_amount or 0),
             "created_at": c.created_at.isoformat(),
         }
         for c in campaigns

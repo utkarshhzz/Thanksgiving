@@ -27,8 +27,11 @@ class Settings(BaseSettings):
     CLOUDINARY_API_KEY: str = ""
     CLOUDINARY_API_SECRET: str = ""
 
-    # Email — Resend (free 100/day, signup at resend.com)
-    RESEND_API_KEY: str = ""
+    # Email — Brevo (free 300/day, signup at brevo.com)
+    BREVO_API_KEY: str = ""
+
+    # AI — Google Gemini (free tier at aistudio.google.com)
+    GEMINI_API_KEY: str = ""
 
     # Payments — Razorpay (signup at razorpay.com, use test keys)
     RAZORPAY_KEY_ID: str = ""

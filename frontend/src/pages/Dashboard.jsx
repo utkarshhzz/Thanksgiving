@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 
 import Navbar from '../components/Navbar.jsx'
 import { useAuthStore } from '../store/authStore'
@@ -8,6 +8,7 @@ import { campaignApi } from '../api/campaigns'
 import { volunteerApi } from '../api/volunteering'
 import { inKindApi } from '../api/inkind'
 import { spacesApi } from '../api/spaces'
+import { aiApi } from '../api/ai'
 
 // ── Small stat card at the top of the dashboard ─────────────────
 function StatCard({ icon, label, value, color, delay }) {
@@ -156,6 +157,10 @@ function Dashboard() {
     spaces:      null,
   })
 
+  // AI Impact summary state
+  const [aiImpact, setAiImpact]     = useState(null)
+  const [aiLoading, setAiLoading]   = useState(false)
+
   // Load stats on mount — fire all 4 requests in parallel with Promise.all
   // NEW — correct APIs, correct data fields
 useEffect(() => {
@@ -191,6 +196,21 @@ useEffect(() => {
   }
   load()
 }, [])
+
+// Load AI impact summary once (independent of stats)
+const loadAiImpact = async () => {
+  setAiLoading(true)
+  try {
+    const res = await aiApi.myImpact()
+    setAiImpact(res.data)
+  } catch {
+    // AI not configured — silently skip
+  } finally {
+    setAiLoading(false)
+  }
+}
+
+useEffect(() => { loadAiImpact() }, [])
 
 
   const modules = [
@@ -299,6 +319,69 @@ useEffect(() => {
           <StatCard icon="📅" label="Space Bookings"     value={stats.spaces}    color="#a78bfa" delay={0.2} />
           <StatCard icon="💜" label="Impact Score"       value={stats.campaigns} color="#7c3aed" delay={0.25} />
         </div>
+
+        {/* ── AI Impact Summary ── */}
+        <AnimatePresence>
+          {(aiLoading || aiImpact) && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              style={{
+                marginBottom: '2.5rem',
+                padding: '1.5rem 2rem',
+                background: 'linear-gradient(135deg, rgba(124,58,237,0.12), rgba(167,139,250,0.06))',
+                border: '1px solid rgba(124,58,237,0.25)',
+                borderRadius: '20px',
+                backdropFilter: 'blur(20px)',
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+            >
+              {/* Glow accent */}
+              <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '120px', height: '120px', background: 'rgba(124,58,237,0.15)', borderRadius: '50%', filter: 'blur(40px)', pointerEvents: 'none' }} />
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, minWidth: '200px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                    <span style={{ fontSize: '1.2rem' }}>✨</span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: '0.08em' }}>AI Impact Summary</span>
+                  </div>
+                  {aiLoading ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {[1, 0.7, 0.5].map((w, i) => (
+                        <div key={i} style={{ height: '14px', borderRadius: '6px', background: 'rgba(255,255,255,0.07)', width: `${w * 100}%`, animation: 'pulse 1.5s ease-in-out infinite' }} />
+                      ))}
+                    </div>
+                  ) : aiImpact ? (
+                    <>
+                      {aiImpact.highlight && (
+                        <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.1rem', color: '#a78bfa', marginBottom: '0.5rem' }}>
+                          {aiImpact.highlight}
+                        </div>
+                      )}
+                      <p style={{ color: 'var(--color-text-muted)', lineHeight: 1.7, fontSize: '0.9rem', margin: 0 }}>
+                        {aiImpact.summary}
+                      </p>
+                    </>
+                  ) : null}
+                </div>
+                {!aiLoading && (
+                  <button
+                    onClick={loadAiImpact}
+                    style={{
+                      flexShrink: 0, padding: '0.4rem 0.9rem',
+                      borderRadius: '99px', border: '1px solid rgba(124,58,237,0.3)',
+                      background: 'rgba(124,58,237,0.1)', color: '#a78bfa',
+                      fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer',
+                    }}
+                  >
+                    ↻ Regenerate
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* ── Module cards ── */}
         <h2 style={{

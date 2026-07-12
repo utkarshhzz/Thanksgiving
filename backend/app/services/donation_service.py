@@ -9,6 +9,7 @@ from decimal import Decimal
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from app.core.config import settings
 from app.models.crowdfunding import Campaign, CampaignStatus
 from app.models.donation import Donation, TransactionStatus
 from app.models.user import User
@@ -74,7 +75,34 @@ async def create_donation(
     await db.refresh(donation)
     await db.refresh(campaign)
 
+    # ── P1: Fire "campaign fully funded" email when goal hit ─────────────────
+    just_completed = (
+        not campaign.is_flexible_funding
+        and campaign.status == CampaignStatus.COMPLETED
+    )
+    if just_completed:
+        try:
+            import asyncio
+            from app.services.email_service import send_campaign_funded_email
+            from app.models.organization import Organization
+            org = await db.get(Organization, campaign.organization_id)
+            if org:
+                # Get org owner's email
+                owner = await db.get(type(current_user), org.owner_id)
+                if owner:
+                    campaign_url = f"{settings.FRONTEND_URL}/campaigns/{campaign.id}"
+                    asyncio.create_task(send_campaign_funded_email(
+                        org_email=owner.email,
+                        org_name=org.name,
+                        campaign_title=campaign.title,
+                        total_raised=float(campaign.raised_amount or 0),
+                        campaign_url=campaign_url,
+                    ))
+        except Exception:
+            pass  # email failure must NEVER break the donation transaction
+
     return donation
+
 
 async def get_campaign_donations(
     db:AsyncSession,

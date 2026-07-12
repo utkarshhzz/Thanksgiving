@@ -21,4 +21,9 @@ export const volunteerApi = {
   // Hours
   logHours:  (data) => api.post('/hours/log', data),
   myHours:   ()     => api.get('/hours/me'),
+
+  // QR Check-in / Check-out
+  generateQrToken: (opportunityId)           => api.post(`/opportunities/${opportunityId}/qr-token`),
+  qrCheckin:       (qr_token)                => api.post('/hours/qr-checkin', { qr_token }),
+  qrCheckout:      (qr_token, description)   => api.post('/hours/qr-checkout', { qr_token, description }),
 }
