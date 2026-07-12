@@ -193,3 +193,58 @@ async def recent_donations(
         }
         for d in donations
     ]
+
+
+# ── Admin Campaign Moderation ─────────────────────────────────────────────────
+from pydantic import BaseModel
+
+class AdminCampaignStatusUpdate(BaseModel):
+    status: CampaignStatus
+    note: str = ""
+
+@router.patch("/campaigns/{campaign_id}/status", summary="Admin: approve or reject a campaign")
+async def admin_update_campaign_status(
+    campaign_id: uuid.UUID,
+    data: AdminCampaignStatusUpdate,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    """Admin can force any campaign into any status (approve/reject/archive)."""
+    campaign = await db.get(Campaign, campaign_id)
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    campaign.status = data.status
+    await db.flush()
+    await db.refresh(campaign)
+    return {
+        "campaign_id": str(campaign.id),
+        "new_status": campaign.status.value,
+        "note": data.note,
+        "updated_by": str(admin.id),
+    }
+
+
+@router.get("/campaigns", summary="Admin: list all campaigns with pagination")
+async def admin_list_campaigns(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(30, ge=1, le=100),
+    status: Optional[CampaignStatus] = Query(None),
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    query = select(Campaign).order_by(desc(Campaign.created_at))
+    if status:
+        query = query.where(Campaign.status == status)
+    result = await db.execute(query.offset(skip).limit(limit))
+    campaigns = result.scalars().all()
+    return [
+        {
+            "id":             str(c.id),
+            "title":          c.title,
+            "status":         c.status.value,
+            "raised_amount":  float(c.raised_amount or 0),
+            "target_amount":  float(c.target_amount or 0),
+            "created_at":     c.created_at.isoformat(),
+        }
+        for c in campaigns
+    ]

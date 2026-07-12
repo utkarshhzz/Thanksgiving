@@ -5,7 +5,7 @@ from typing import Optional, Any
 from fastapi import APIRouter, Depends, HTTPException, status, Query, File, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_db, get_current_active_user
-from app.models.crowdfunding import Campaign, CampaignStatus
+from app.models.crowdfunding import Campaign, CampaignStatus, CampaignCategory
 from app.models.user import User
 from app.schemas.campaign import CampaignCreate, CampaignStatusUpdate, CampaignRead, CampaignUpdate
 from app.services.campaign_service import (
@@ -29,13 +29,16 @@ async def get_campaigns(
     skip:int=Query(0,ge=0),
     limit: int = Query(20, ge=1, le=100),
     status: Optional[CampaignStatus] = Query(None),
+    campaign_type: Optional[CampaignCategory] = Query(None),
+    search: Optional[str] = Query(None, max_length=200),
+    city: Optional[str] = Query(None, max_length=100),
     db: AsyncSession = Depends(get_db),
 ):
-    # Public endpoint no auth required
-    # returns a paginated list of campaigns with optional stataus filter
-    # Query parameters:
-    # skip=0 and limit=20 brings first 20 campaigns and status=active brings only active campaigns
-    return await list_campaigns(db,skip=skip,limit=limit,status=status)
+    return await list_campaigns(
+        db, skip=skip, limit=limit,
+        status=status, campaign_type=campaign_type,
+        search=search, city=city,
+    )
 
 @router.get("/{campaign_id}",response_model=CampaignRead,summary="Get Campaign by id")
 async def get_campaign(

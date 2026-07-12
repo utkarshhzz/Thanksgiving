@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import { toast } from 'react-hot-toast'
 
 import Navbar from '../components/Navbar.jsx'
 import { campaignApi } from '../api/campaigns'
+import { aiApi } from '../api/ai'
+import api from '../api/client'
 import { useAuthStore } from '../store/authStore'
 
 // ── Donate modal ─────────────────────────────────────────────────
@@ -189,7 +192,12 @@ function CampaignDetail() {
   const [loading, setLoading]   = useState(true)
   const [showDonate, setShowDonate] = useState(false)
   const [donated, setDonated]   = useState(false)
+  const [updates, setUpdates]   = useState([])
+  const [suggestions, setSuggestions] = useState([])
+  const [newUpdate, setNewUpdate] = useState({ title: '', body: '' })
+  const [postingUpdate, setPostingUpdate] = useState(false)
   const isLoggedIn = useAuthStore(s => s.isLoggedIn)
+  const isOrgUser  = useAuthStore(s => s.isOrgUser)
   const navigate   = useNavigate()
 
   useEffect(() => {
@@ -197,7 +205,45 @@ function CampaignDetail() {
       .then(res => setCampaign(res.data))
       .catch(() => navigate('/campaigns'))
       .finally(() => setLoading(false))
+    // Load updates
+    api.get(`/campaigns/${id}/updates`)
+      .then(res => setUpdates(res.data))
+      .catch(() => {})
   }, [id])
+
+  const handlePostUpdate = async () => {
+    if (!newUpdate.title || !newUpdate.body) return
+    setPostingUpdate(true)
+    try {
+      const res = await api.post(`/campaigns/${id}/updates`, newUpdate)
+      setUpdates(prev => [res.data, ...prev])
+      setNewUpdate({ title: '', body: '' })
+      toast.success('Update posted!')
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Could not post update')
+    } finally {
+      setPostingUpdate(false)
+    }
+  }
+
+  const handleShare = async () => {
+    const url = window.location.href
+    const text = `Support "${campaign.title}" on ThankGiving!`
+    if (navigator.share) {
+      await navigator.share({ title: campaign.title, text, url })
+    } else {
+      navigator.clipboard.writeText(url)
+      toast.success('Link copied to clipboard!')
+    }
+  }
+
+  const loadSuggestions = async () => {
+    if (suggestions.length > 0) return
+    try {
+      const res = await aiApi.suggestCampaigns(id)
+      setSuggestions(res.data.suggestions || [])
+    } catch { /* graceful fail */ }
+  }
 
   if (loading) return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -223,13 +269,42 @@ function CampaignDetail() {
         </Link>
 
         {/* Status badge */}
-        <div style={{ marginBottom: '1rem' }}>
+        <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
           <span className={`badge badge-${campaign.status === 'active' ? 'success' : 'primary'}`}>
             {campaign.status}
           </span>
+          {/* Share button */}
+          <button onClick={handleShare}
+            style={{
+              padding: '4px 14px', borderRadius: '99px', fontSize: '0.75rem',
+              fontWeight: 600, cursor: 'pointer', border: '1px solid rgba(255,255,255,0.12)',
+              background: 'transparent', color: 'var(--color-text-muted)',
+              display: 'flex', alignItems: 'center', gap: '0.3rem',
+            }}
+          >
+            🔗 Share
+          </button>
+          {/* Twitter */}
+          <a href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Support "${campaign.title}"`)}&url=${encodeURIComponent(window.location.href)}`}
+            target="_blank" rel="noopener noreferrer"
+            style={{
+              padding: '4px 14px', borderRadius: '99px', fontSize: '0.75rem',
+              fontWeight: 600, textDecoration: 'none', border: '1px solid rgba(29,161,242,0.3)',
+              background: 'rgba(29,161,242,0.1)', color: '#60a5fa',
+            }}
+          >𝕏 Tweet</a>
+          {/* WhatsApp */}
+          <a href={`https://wa.me/?text=${encodeURIComponent(`Support "${campaign.title}" on ThankGiving: ${window.location.href}`)}`}
+            target="_blank" rel="noopener noreferrer"
+            style={{
+              padding: '4px 14px', borderRadius: '99px', fontSize: '0.75rem',
+              fontWeight: 600, textDecoration: 'none', border: '1px solid rgba(37,211,102,0.3)',
+              background: 'rgba(37,211,102,0.1)', color: '#4ade80',
+            }}
+          >💬 WhatsApp</a>
         </div>
 
-        {/* Campaign cover image (only rendered if uploaded) */}
+        {/* Campaign cover image */}
         {campaign.image_url && (
           <motion.img
             src={campaign.image_url}
@@ -238,64 +313,45 @@ function CampaignDetail() {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5 }}
             style={{
-              width:        '100%',
-              height:       '300px',
-              objectFit:    'cover',
-              borderRadius: '20px',
-              marginBottom: '1.5rem',
-              display:      'block',
+              width: '100%', height: '300px', objectFit: 'cover',
+              borderRadius: '20px', marginBottom: '1.5rem', display: 'block',
             }}
           />
         )}
 
         <h1 style={{
-          fontFamily:   'var(--font-heading)',
-          fontWeight:   900,
-          fontSize:     'clamp(1.8rem, 4vw, 2.8rem)',
-          lineHeight:   1.15,
-          marginBottom: '1.5rem',
-          letterSpacing: '-0.02em',
+          fontFamily:   'var(--font-heading)', fontWeight: 900,
+          fontSize:     'clamp(1.8rem, 4vw, 2.8rem)', lineHeight: 1.15,
+          marginBottom: '1.5rem', letterSpacing: '-0.02em',
         }}>
           {campaign.title}
         </h1>
 
         {/* Progress section */}
-        <motion.div
-          className="card card-glow"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
+        <motion.div className="card card-glow"
+          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
           style={{ marginBottom: '2rem' }}
         >
-          {/* Big amount */}
           <div style={{ marginBottom: '1rem' }}>
             <span style={{
-              fontFamily:  'var(--font-heading)',
-              fontWeight:  900,
-              fontSize:    'clamp(2rem, 5vw, 3rem)',
-              background:  'linear-gradient(135deg, var(--color-primary-light), var(--color-accent))',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor:  'transparent',
-              backgroundClip: 'text',
-            }}>
-              ₹{raised.toLocaleString('en-IN')}
-            </span>
+              fontFamily: 'var(--font-heading)', fontWeight: 900,
+              fontSize: 'clamp(2rem, 5vw, 3rem)',
+              background: 'linear-gradient(135deg, var(--color-primary-light), var(--color-accent))',
+              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+            }}>₹{raised.toLocaleString('en-IN')}</span>
             <span style={{ color: 'var(--color-text-muted)', marginLeft: '0.5rem', fontSize: '1rem' }}>
               raised of ₹{goal.toLocaleString('en-IN')} goal
             </span>
           </div>
 
-          {/* Progress bar */}
           <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '99px', height: '10px', overflow: 'hidden', marginBottom: '1rem' }}>
             <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${pct}%` }}
+              initial={{ width: 0 }} animate={{ width: `${pct}%` }}
               transition={{ duration: 1.2, ease: 'easeOut', delay: 0.3 }}
               style={{ height: '100%', borderRadius: '99px', background: 'linear-gradient(90deg, #7c3aed, #f59e0b)' }}
             />
           </div>
 
-          {/* Stats row */}
           <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
             <div><span style={{ fontWeight: 700 }}>{pct}%</span> <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>funded</span></div>
             {daysLeft !== null && <div><span style={{ fontWeight: 700 }}>{daysLeft}</span> <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>days left</span></div>}
@@ -305,28 +361,19 @@ function CampaignDetail() {
 
         {/* Donate button */}
         {campaign.status === 'active' && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
             style={{ marginBottom: '2.5rem' }}
           >
             {donated ? (
               <div style={{
-                padding:      '1.25rem',
-                borderRadius: '14px',
-                background:   'rgba(16, 185, 129, 0.1)',
-                border:       '1px solid rgba(16, 185, 129, 0.3)',
-                color:        '#34d399',
-                textAlign:    'center',
-                fontWeight:   600,
+                padding: '1.25rem', borderRadius: '14px',
+                background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)',
+                color: '#34d399', textAlign: 'center', fontWeight: 600,
               }}>
                 ✅ Thank you! Your donation has been recorded.
               </div>
             ) : (
-              <button
-                className="btn btn-primary btn-lg"
-                style={{ width: '100%' }}
+              <button className="btn btn-primary btn-lg" style={{ width: '100%' }}
                 onClick={() => isLoggedIn() ? setShowDonate(true) : navigate('/login')}
               >
                 💜 Donate Now
@@ -335,13 +382,43 @@ function CampaignDetail() {
           </motion.div>
         )}
 
+        {/* AI Suggestions — shown after donation */}
+        {donated && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+            className="card" style={{ marginBottom: '2rem', border: '1px solid rgba(124,58,237,0.2)' }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1rem' }}>
+                ✨ You might also like
+              </h3>
+              {suggestions.length === 0 && (
+                <button onClick={loadSuggestions}
+                  style={{
+                    padding: '4px 12px', borderRadius: '99px', fontSize: '0.75rem',
+                    fontWeight: 600, cursor: 'pointer', border: '1px solid rgba(124,58,237,0.3)',
+                    background: 'rgba(124,58,237,0.1)', color: '#a78bfa',
+                  }}
+                >AI Suggest</button>
+              )}
+            </div>
+            {suggestions.length === 0 ? (
+              <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+                Click "AI Suggest" to discover similar campaigns powered by Gemini AI.
+              </p>
+            ) : (
+              <ul style={{ paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {suggestions.map((s, i) => (
+                  <li key={i} style={{ color: 'var(--color-text-muted)', fontSize: '0.87rem', lineHeight: 1.5 }}>{s}</li>
+                ))}
+              </ul>
+            )}
+          </motion.div>
+        )}
+
         {/* Description */}
         {campaign.description && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="card"
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }} className="card" style={{ marginBottom: '2rem' }}
           >
             <h2 style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1.2rem', marginBottom: '1rem' }}>
               About this campaign
@@ -351,6 +428,73 @@ function CampaignDetail() {
             </p>
           </motion.div>
         )}
+
+        {/* Campaign Updates feed */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
+          <h2 style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1.2rem', marginBottom: '1.25rem' }}>
+            📢 Campaign Updates
+          </h2>
+
+          {/* Post update form — only for org owner */}
+          {isOrgUser() && (
+            <div className="card" style={{ marginBottom: '1.5rem', border: '1px dashed rgba(124,58,237,0.3)' }}>
+              <h3 style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.75rem', color: 'var(--color-text-muted)' }}>
+                Post an update
+              </h3>
+              <input
+                className="form-input"
+                placeholder="Update title..."
+                value={newUpdate.title}
+                onChange={e => setNewUpdate(u => ({ ...u, title: e.target.value }))}
+                style={{ marginBottom: '0.75rem' }}
+              />
+              <textarea
+                className="form-input"
+                placeholder="What's new with this campaign? Share progress, milestones, or news..."
+                value={newUpdate.body}
+                onChange={e => setNewUpdate(u => ({ ...u, body: e.target.value }))}
+                rows={4}
+                style={{ marginBottom: '0.75rem', resize: 'vertical' }}
+              />
+              <button onClick={handlePostUpdate} disabled={postingUpdate || !newUpdate.title || !newUpdate.body}
+                className="btn btn-primary" style={{ width: '100%' }}
+              >
+                {postingUpdate ? 'Posting...' : '📢 Post Update'}
+              </button>
+            </div>
+          )}
+
+          {updates.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--color-text-muted)',
+              background: 'rgba(255,255,255,0.02)', borderRadius: '14px', border: '1px dashed rgba(255,255,255,0.08)',
+            }}>
+              <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📭</div>
+              <p style={{ fontSize: '0.88rem' }}>No updates yet. The campaign team will post progress here.</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {updates.map((u, i) => (
+                <motion.div key={u.id}
+                  initial={{ opacity: 0, x: -15 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.06 }}
+                  style={{
+                    background: 'rgba(15,15,35,0.7)', border: '1px solid rgba(255,255,255,0.07)',
+                    borderRadius: '14px', padding: '1.25rem', backdropFilter: 'blur(20px)',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.6rem', gap: '1rem' }}>
+                    <h3 style={{ fontWeight: 700, fontSize: '0.97rem' }}>{u.title}</h3>
+                    <span style={{ fontSize: '0.73rem', color: 'var(--color-text-faint)', flexShrink: 0 }}>
+                      {new Date(u.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </span>
+                  </div>
+                  <p style={{ color: 'var(--color-text-muted)', fontSize: '0.87rem', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+                    {u.body}
+                  </p>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </motion.div>
       </div>
 
       {/* Donate modal */}
@@ -363,6 +507,7 @@ function CampaignDetail() {
               setShowDonate(false)
               setDonated(true)
               setCampaign(prev => ({ ...prev, total_raised: (prev.total_raised ?? 0) + amt }))
+              loadSuggestions()
             }}
           />
         )}

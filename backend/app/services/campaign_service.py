@@ -23,15 +23,28 @@ async def list_campaigns(
     skip:int=0,
     limit:int=20,
     status:CampaignStatus | None=None,
+    campaign_type:CampaignCategory | None=None,
+    search:str | None=None,
+    city:str | None=None,
 )-> list[Campaign]:
-    # list campaigns with optional status filter and pagination
-    # skip/limit implemet cursor based pagination
     query=select(Campaign)
     if status is not None:
         query=query.where(Campaign.status==status)
+    if campaign_type is not None:
+        query=query.where(Campaign.category==campaign_type)
+    if search:
+        term = f"%{search.lower()}%"
+        from sqlalchemy import or_
+        query=query.where(
+            or_(
+                Campaign.title.ilike(term),
+                Campaign.description.ilike(term),
+            )
+        )
+    if city:
+        query=query.where(Campaign.city.ilike(f"%{city}%"))
 
     query=query.offset(skip).limit(limit).order_by(Campaign.created_at.desc())
-
     result= await db.execute(query)
     return result.scalars().all()
 

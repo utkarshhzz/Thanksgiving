@@ -5,10 +5,11 @@ import toast from 'react-hot-toast'
 import { useAuthStore } from '../store/authStore'
 
 const navLinks = [
-  { to: '/campaigns', label: 'Campaigns' },
-  { to: '/volunteer',  label: 'Volunteer'  },
-  { to: '/in-kind',    label: 'Donate Goods' },
-  { to: '/spaces',     label: 'Spaces'     },
+  { to: '/campaigns',   label: 'Campaigns'   },
+  { to: '/volunteer',   label: 'Volunteer'   },
+  { to: '/in-kind',     label: 'Donate Goods'},
+  { to: '/spaces',      label: 'Spaces'      },
+  { to: '/leaderboard', label: '🏆 Board'    },
 ]
 
 function Navbar() {

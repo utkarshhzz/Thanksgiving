@@ -21,10 +21,11 @@ async def get_opportunities(
     limit:int=Query(20,ge=1,le=100),
     status:Optional[OpportunityStatus]=Query(None),
     location_type:Optional[LocationType]= Query(None),
+    search:Optional[str]=Query(None, max_length=200),
+    city:Optional[str]=Query(None, max_length=100),
     db:AsyncSession=Depends(get_db)
 ):
-    # public route
-    return await list_opportunities(db,skip,limit,status,location_type)
+    return await list_opportunities(db, skip, limit, status, location_type, search, city)
 
 @router.get("/{opportunity_id}", response_model=OpportunityRead)
 async def get_opportunity(

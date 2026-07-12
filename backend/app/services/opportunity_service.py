@@ -29,7 +29,10 @@ async def list_opportunities(
     limit:int=20,
     status:OpportunityStatus | None=None,
     location_type:str | None=None,
+    search:str | None=None,
+    city:str | None=None,
 )-> list[VolunteerOpportunity]:
+    from sqlalchemy import or_
     query=select(VolunteerOpportunity)
 
     if status:
@@ -37,6 +40,18 @@ async def list_opportunities(
 
     if location_type:
         query=query.where(VolunteerOpportunity.location_type==location_type)
+
+    if search:
+        term = f"%{search.lower()}%"
+        query=query.where(
+            or_(
+                VolunteerOpportunity.title.ilike(term),
+                VolunteerOpportunity.description.ilike(term),
+            )
+        )
+
+    if city:
+        query=query.where(VolunteerOpportunity.city.ilike(f"%{city}%"))
 
     query=query.order_by(VolunteerOpportunity.created_at.desc()).offset(skip).limit(limit)
     result = await db.execute(query)

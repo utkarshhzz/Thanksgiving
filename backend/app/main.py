@@ -8,6 +8,11 @@ from app.core.error_handlers import register_exception_handlers
 
 from app.core.config import settings
 
+# ── Ensure all models are registered with Base.metadata ──────────────────────
+# Models defined inline in routers must be imported here before create_all.
+from app.api.v1.routers.updates import CampaignUpdate  # noqa: F401
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup-> runs once when server starts

@@ -209,33 +209,34 @@ function Campaigns() {
   const [loading, setLoading]     = useState(true)
   const [error, setError]         = useState(null)
   const [search, setSearch]       = useState('')
-  const [typeFilter, setTypeFilter] = useState('all')
+  const [typeFilter, setTypeFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
 
-  const isOrgUser = useAuthStore(s => s.isOrgUser)
-  const isLoggedIn = useAuthStore(s => s.isLoggedIn)
+  const isOrgUser  = useAuthStore(s => s.isOrgUser)
 
+  // Fetch with current filters — server-side search
   useEffect(() => {
-    const load = async () => {
+    const timer = setTimeout(async () => {
+      setLoading(true)
+      setError(null)
       try {
-        const res = await campaignApi.list()
+        const params = { limit: 50 }
+        if (search)       params.search        = search
+        if (typeFilter)   params.campaign_type  = typeFilter
+        if (statusFilter) params.status         = statusFilter
+        const res = await campaignApi.list(params)
         setCampaigns(res.data)
       } catch {
         setError('Could not load campaigns. Is the backend running?')
       } finally {
         setLoading(false)
       }
-    }
-    load()
-  }, [])
+    }, 350)   // 350ms debounce on search input
+    return () => clearTimeout(timer)
+  }, [search, typeFilter, statusFilter])
 
-  // Client-side filtering — no extra API calls needed
-  const filtered = campaigns.filter(c => {
-    const matchesSearch = c.title.toLowerCase().includes(search.toLowerCase())
-    const matchesType   = typeFilter === 'all' || c.campaign_type === typeFilter
-    return matchesSearch && matchesType
-  })
-
-  const campaignTypes = ['all', ...new Set(campaigns.map(c => c.campaign_type).filter(Boolean))]
+  const TYPES   = ['FUNDRAISER','EDUCATION','HEALTHCARE','ENVIRONMENT','COMMUNITY','DISASTER_RELIEF']
+  const STATUSES = ['active','draft','completed','cancelled']
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -263,8 +264,6 @@ function Campaigns() {
                 Support causes that matter — every rupee is tracked.
               </p>
             </div>
-
-            {/* Create button — only for org users */}
             {isOrgUser() && (
               <Link to="/campaigns/new" className="btn btn-primary">
                 + New Campaign
@@ -273,63 +272,92 @@ function Campaigns() {
           </div>
         </motion.div>
 
-        {/* Search + filter bar */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.1 }}
-          style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap' }}
+        {/* Search bar */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}
+          style={{ marginBottom: '1rem' }}
         >
           <input
             className="form-input"
-            placeholder="🔍  Search campaigns..."
+            placeholder="🔍  Search campaigns by title or keyword..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            style={{ flex: 1, minWidth: '200px' }}
+            style={{ width: '100%' }}
           />
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-            {campaignTypes.map(type => (
-              <button
-                key={type}
-                onClick={() => setTypeFilter(type)}
-                style={{
-                  padding:      '0.5rem 1rem',
-                  borderRadius: '99px',
-                  fontSize:     '0.8rem',
-                  fontWeight:   600,
-                  border:       '1px solid',
-                  cursor:       'pointer',
-                  transition:   'all 0.2s',
-                  background:   typeFilter === type ? 'var(--color-primary)' : 'transparent',
-                  borderColor:  typeFilter === type ? 'var(--color-primary)' : 'rgba(255,255,255,0.12)',
-                  color:        typeFilter === type ? 'white' : 'var(--color-text-muted)',
-                }}
-              >
-                {type === 'all' ? 'All' : type.replace('_', ' ')}
-              </button>
-            ))}
-          </div>
         </motion.div>
 
-        {/* Loading state */}
+        {/* Filter chips — Category */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}
+          style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}
+        >
+          <button onClick={() => setTypeFilter('')}
+            style={{
+              padding: '0.35rem 0.9rem', borderRadius: '99px', fontSize: '0.78rem',
+              fontWeight: 600, border: '1px solid', cursor: 'pointer', transition: 'all 0.2s',
+              background: !typeFilter ? 'var(--color-primary)' : 'transparent',
+              borderColor: !typeFilter ? 'var(--color-primary)' : 'rgba(255,255,255,0.12)',
+              color: !typeFilter ? 'white' : 'var(--color-text-muted)',
+            }}
+          >All Types</button>
+          {TYPES.map(t => (
+            <button key={t} onClick={() => setTypeFilter(typeFilter === t ? '' : t)}
+              style={{
+                padding: '0.35rem 0.9rem', borderRadius: '99px', fontSize: '0.78rem',
+                fontWeight: 600, border: '1px solid', cursor: 'pointer', transition: 'all 0.2s',
+                background: typeFilter === t ? 'var(--color-primary)' : 'transparent',
+                borderColor: typeFilter === t ? 'var(--color-primary)' : 'rgba(255,255,255,0.12)',
+                color: typeFilter === t ? 'white' : 'var(--color-text-muted)',
+              }}
+            >{t.replace('_', ' ')}</button>
+          ))}
+        </motion.div>
+
+        {/* Filter chips — Status */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
+          style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '2rem' }}
+        >
+          {STATUSES.map(s => (
+            <button key={s} onClick={() => setStatusFilter(statusFilter === s ? '' : s)}
+              style={{
+                padding: '0.3rem 0.8rem', borderRadius: '99px', fontSize: '0.73rem',
+                fontWeight: 600, border: '1px solid', cursor: 'pointer', transition: 'all 0.2s',
+                background: statusFilter === s ? '#10b98115' : 'transparent',
+                borderColor: statusFilter === s ? '#10b981' : 'rgba(255,255,255,0.08)',
+                color: statusFilter === s ? '#34d399' : 'var(--color-text-faint)',
+              }}
+            >{s}</button>
+          ))}
+          {(search || typeFilter || statusFilter) && (
+            <button onClick={() => { setSearch(''); setTypeFilter(''); setStatusFilter('') }}
+              style={{
+                padding: '0.3rem 0.8rem', borderRadius: '99px', fontSize: '0.73rem',
+                fontWeight: 600, border: '1px solid rgba(239,68,68,0.3)', cursor: 'pointer',
+                background: 'transparent', color: '#f87171',
+              }}
+            >✕ Clear filters</button>
+          )}
+        </motion.div>
+
+        {/* Result count */}
+        {!loading && !error && (
+          <p style={{ color: 'var(--color-text-faint)', fontSize: '0.82rem', marginBottom: '1.25rem' }}>
+            {campaigns.length === 0 ? 'No results' : `${campaigns.length} campaign${campaigns.length !== 1 ? 's' : ''} found`}
+          </p>
+        )}
+
         {loading && (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}>
             <div className="spinner" style={{ width: '40px', height: '40px' }} />
           </div>
         )}
 
-        {/* Error state */}
         {error && !loading && (
-          <div style={{
-            textAlign: 'center', padding: '4rem', color: 'var(--color-text-muted)',
-          }}>
+          <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--color-text-muted)' }}>
             <span style={{ fontSize: '2rem' }}>⚠️</span>
             <p style={{ marginTop: '1rem' }}>{error}</p>
           </div>
         )}
 
-        {/* Empty state */}
-        {!loading && !error && filtered.length === 0 && (
+        {!loading && !error && campaigns.length === 0 && (
           <div style={{ textAlign: 'center', padding: '5rem', color: 'var(--color-text-muted)' }}>
             <span style={{ fontSize: '3rem' }}>📭</span>
             <p style={{ marginTop: '1rem', fontSize: '1.1rem' }}>No campaigns found</p>
@@ -339,14 +367,13 @@ function Campaigns() {
           </div>
         )}
 
-        {/* Campaign grid */}
-        {!loading && !error && filtered.length > 0 && (
+        {!loading && !error && campaigns.length > 0 && (
           <div style={{
-            display:             'grid',
+            display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-            gap:                 '1.5rem',
+            gap: '1.5rem',
           }}>
-            {filtered.map((c, i) => (
+            {campaigns.map((c, i) => (
               <CampaignCard key={c.id} campaign={c} index={i} />
             ))}
           </div>

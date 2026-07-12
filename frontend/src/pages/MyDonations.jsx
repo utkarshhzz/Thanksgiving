@@ -172,6 +172,36 @@ function MyDonations() {
                     View →
                   </Link>
                 )}
+
+                {/* Receipt download */}
+                {donation.transaction_status === 'COMPLETED' && (
+                  <button
+                    onClick={() => {
+                      const token = localStorage.getItem('access_token')
+                      const url = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/donations/${donation.id}/receipt`
+                      // Fetch with auth header and trigger download
+                      fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+                        .then(res => res.blob())
+                        .then(blob => {
+                          const a = document.createElement('a')
+                          a.href = URL.createObjectURL(blob)
+                          a.download = `receipt-${donation.id.slice(0, 8)}.pdf`
+                          a.click()
+                          URL.revokeObjectURL(a.href)
+                        })
+                        .catch(() => alert('Could not download receipt.'))
+                    }}
+                    style={{
+                      padding: '0.3rem 0.75rem', borderRadius: '99px', fontSize: '0.75rem',
+                      fontWeight: 600, flexShrink: 0, cursor: 'pointer',
+                      background: 'rgba(16,185,129,0.12)', color: '#34d399',
+                      border: '1px solid rgba(16,185,129,0.25)',
+                    }}
+                  >
+                    📄 Receipt
+                  </button>
+                )}
+
               </motion.div>
             ))}
           </div>

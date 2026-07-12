@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 
 import Landing         from './pages/landing.jsx'
@@ -20,6 +20,9 @@ import ListSpace       from './pages/ListSpace.jsx'
 import MyBookings      from './pages/MyBookings.jsx'
 import Profile         from './pages/Profile.jsx'
 import AdminDashboard  from './pages/AdminDashboard.jsx'
+import OrgProfile      from './pages/OrgProfile.jsx'
+import Leaderboard     from './pages/Leaderboard.jsx'
+import NotFound        from './pages/NotFound.jsx'
 import ProtectedRoute  from './components/ProtectedRoute.jsx'
 
 function App() {
@@ -54,13 +57,17 @@ function App() {
           <Route path="/spaces/bookings" element={<ProtectedRoute><MyBookings /></ProtectedRoute>} />
           <Route path="/spaces/:id"      element={<SpaceDetail />} />
 
+          {/* ── Community ── */}
+          <Route path="/leaderboard"          element={<Leaderboard />} />
+          <Route path="/organizations/:id"    element={<OrgProfile />} />
+
           {/* ── Protected ── */}
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/profile"   element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/admin"     element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
 
-          {/* ── 404 → home ── */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* ── 404 ── */}
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </AnimatePresence>
     </BrowserRouter>
