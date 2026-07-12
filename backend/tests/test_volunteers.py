@@ -30,10 +30,9 @@ async def active_opportunity(
         organization_id=test_org.id,
         title="Tree Planting Drive",
         description="Plant 500 trees in Bengaluru",
-        category="environment",
         city="Bengaluru",
-        hours_per_week=5,
-        max_volunteers=20,
+        commitment_hours_per_week=5,
+        available_slots=20,
         status=OpportunityStatus.ACTIVE,
     )
     db.add(opp)
@@ -100,7 +99,8 @@ class TestVolunteerOpportunities:
     ):
         """Individual can apply to an active opportunity."""
         response = await client.post(
-            f"/api/v1/applications/{active_opportunity.id}/apply",
+            f"/api/v1/opportunities/{active_opportunity.id}/apply",
+            json={},
             headers={"Authorization": f"Bearer {user_token}"},
         )
         assert response.status_code in (200, 201), response.text
@@ -112,7 +112,8 @@ class TestVolunteerOpportunities:
     ):
         """Guest cannot apply — must be logged in (401)."""
         response = await client.post(
-            f"/api/v1/applications/{active_opportunity.id}/apply",
+            f"/api/v1/opportunities/{active_opportunity.id}/apply",
+            json={},
         )
         assert response.status_code == 401
 
@@ -128,12 +129,14 @@ class TestVolunteerOpportunities:
         """
         # First apply — should work
         await client.post(
-            f"/api/v1/applications/{active_opportunity.id}/apply",
+            f"/api/v1/opportunities/{active_opportunity.id}/apply",
+            json={},
             headers={"Authorization": f"Bearer {user_token}"},
         )
         # Second apply — should fail
         response = await client.post(
-            f"/api/v1/applications/{active_opportunity.id}/apply",
+            f"/api/v1/opportunities/{active_opportunity.id}/apply",
+            json={},
             headers={"Authorization": f"Bearer {user_token}"},
         )
         assert response.status_code in (400, 409), "Duplicate application must be rejected"
@@ -146,11 +149,12 @@ class TestVolunteerOpportunities:
     ):
         """After applying, /applications/mine shows the application."""
         await client.post(
-            f"/api/v1/applications/{active_opportunity.id}/apply",
+            f"/api/v1/opportunities/{active_opportunity.id}/apply",
+            json={},
             headers={"Authorization": f"Bearer {user_token}"},
         )
         response = await client.get(
-            "/api/v1/applications/mine",
+            "/api/v1/applications/me",
             headers={"Authorization": f"Bearer {user_token}"},
         )
         assert response.status_code == 200, response.text

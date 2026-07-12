@@ -48,8 +48,8 @@ class TestDonations:
     ):
         """Happy path: logged-in user donates to an active campaign."""
         response = await client.post(
-            f"/api/v1/campaigns/{active_campaign.id}/donate",
-            json={"amount": 500.0},
+            f"/api/v1/campaigns/{active_campaign.id}/donations",
+            json={"amount": 500.0, "currency_code": "INR"},
             headers={"Authorization": f"Bearer {user_token}"},
         )
         assert response.status_code in (200, 201), response.text
@@ -63,8 +63,8 @@ class TestDonations:
     ):
         """Guest (no token) must get 401 Unauthorized."""
         response = await client.post(
-            f"/api/v1/campaigns/{active_campaign.id}/donate",
-            json={"amount": 100.0},
+            f"/api/v1/campaigns/{active_campaign.id}/donations",
+            json={"amount": 100.0, "currency_code": "INR"},
             # No Authorization header = not logged in
         )
         assert response.status_code == 401, "Guests must not be able to donate"
@@ -80,8 +80,8 @@ class TestDonations:
         Pydantic validates this and returns 422 Unprocessable Entity.
         """
         response = await client.post(
-            f"/api/v1/campaigns/{active_campaign.id}/donate",
-            json={"amount": 0},
+            f"/api/v1/campaigns/{active_campaign.id}/donations",
+            json={"amount": 0, "currency_code": "INR"},
             headers={"Authorization": f"Bearer {user_token}"},
         )
         assert response.status_code in (400, 422), response.text
@@ -94,8 +94,8 @@ class TestDonations:
         """Donating to a campaign that does not exist returns 404."""
         fake_id = uuid.uuid4()  # random UUID — almost certainly not in DB
         response = await client.post(
-            f"/api/v1/campaigns/{fake_id}/donate",
-            json={"amount": 100.0},
+            f"/api/v1/campaigns/{fake_id}/donations",
+            json={"amount": 100.0, "currency_code": "INR"},
             headers={"Authorization": f"Bearer {user_token}"},
         )
         assert response.status_code == 404
@@ -109,8 +109,8 @@ class TestDonations:
         """After donating, /users/me/donations shows the donation."""
         # Step 1: donate
         await client.post(
-            f"/api/v1/campaigns/{active_campaign.id}/donate",
-            json={"amount": 250.0},
+            f"/api/v1/campaigns/{active_campaign.id}/donations",
+            json={"amount": 250.0, "currency_code": "INR"},
             headers={"Authorization": f"Bearer {user_token}"},
         )
         # Step 2: check history
