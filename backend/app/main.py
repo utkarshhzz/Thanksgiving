@@ -10,7 +10,8 @@ from app.core.config import settings
 
 # ── Ensure all models are registered with Base.metadata ──────────────────────
 # Models defined inline in routers must be imported here before create_all.
-from app.api.v1.routers.updates import CampaignUpdate  # noqa: F401
+from app.api.v1.routers.updates import CampaignUpdate          # noqa: F401
+from app.api.v1.routers.notifications import Notification       # noqa: F401
 
 
 @asynccontextmanager

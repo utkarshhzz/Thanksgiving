@@ -1,6 +1,6 @@
 // useEffect for GSAP scroll animations
 // useRef to reference DOM elements
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 // motion.div: an animatable <div>
@@ -9,6 +9,7 @@ import { motion, useInView } from 'framer-motion'
 
 import Navbar from '../components/Navbar.jsx'
 import HeroCanvas from '../components/HeroCanvas.jsx'
+import api from '../api/client'
 
 // ── Reusable: animated counter (e.g., "0" → "10,000") ──────────
 // This is a child component defined in the same file.
@@ -71,6 +72,15 @@ function FeatureCard({ icon, title, description, index }) {
 
 // ── The main Landing page component ─────────────────────────────
 function Landing() {
+  // Live stats fetched from the public /stats endpoint
+  const [liveStats, setLiveStats] = useState(null)
+
+  useEffect(() => {
+    api.get('/stats')
+      .then(res => setLiveStats(res.data))
+      .catch(() => {}) // graceful fail — fallback shown below
+  }, [])
+
   const features = [
     {
       icon: '💰',
@@ -242,10 +252,28 @@ function Landing() {
           gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
           gap: '3rem',
         }}>
-          <AnimatedStat value="10,000+" label="Donors & Volunteers" />
-          <AnimatedStat value="₹2.5Cr+" label="Funds Raised" />
-          <AnimatedStat value="500+" label="Nonprofits Supported" />
-          <AnimatedStat value="50,000+" label="Volunteer Hours Logged" />
+          <AnimatedStat
+            value={liveStats ? `${(liveStats.total_donors_and_volunteers || 0).toLocaleString('en-IN')}+` : '...'}
+            label="Donors & Volunteers"
+          />
+          <AnimatedStat
+            value={liveStats
+              ? liveStats.total_raised_inr >= 10000000
+                ? `₹${(liveStats.total_raised_inr / 10000000).toFixed(1)}Cr+`
+                : liveStats.total_raised_inr >= 100000
+                  ? `₹${(liveStats.total_raised_inr / 100000).toFixed(1)}L+`
+                  : `₹${Math.round(liveStats.total_raised_inr).toLocaleString('en-IN')}`
+              : '...'}
+            label="Funds Raised"
+          />
+          <AnimatedStat
+            value={liveStats ? `${(liveStats.total_campaigns || 0).toLocaleString('en-IN')}+` : '...'}
+            label="Campaigns Launched"
+          />
+          <AnimatedStat
+            value={liveStats ? `${Math.round(liveStats.total_volunteer_hours || 0).toLocaleString('en-IN')}+` : '...'}
+            label="Volunteer Hours Logged"
+          />
         </div>
       </section>
 

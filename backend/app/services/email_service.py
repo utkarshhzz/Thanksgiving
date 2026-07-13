@@ -78,6 +78,56 @@ async def send_donation_notification(
         logger.error(f"Failed to send donation email: {e}")
 
 
+async def send_donation_confirmation(
+    donor_email: str,
+    donor_name: str,
+    campaign_title: str,
+    amount: float,
+    campaign_url: str,
+) -> None:
+    """
+    Confirmation email to the DONOR after a successful donation.
+    Safe no-op if email is not configured.
+    """
+    resend = _get_resend()
+    if not resend:
+        logger.info(f"[Email skipped] Donor confirmation ₹{amount:.0f} to '{campaign_title}' — not configured")
+        return
+
+    try:
+        resend.Emails.send({
+            "from": "ThankGiving <noreply@thanksgiving.app>",
+            "to": donor_email,
+            "subject": f"✅ Your ₹{amount:,.0f} donation to '{campaign_title}' is confirmed",
+            "html": f"""
+            <div style="font-family: -apple-system, sans-serif; max-width: 600px; margin: 0 auto; background: #0f0f23; color: #e2e8f0; padding: 32px; border-radius: 16px;">
+              <h2 style="color: #a78bfa; font-size: 24px; margin-bottom: 8px;">Thank you, {donor_name}! 💜</h2>
+              <p>Your donation has been successfully recorded.</p>
+              <div style="background: rgba(124,58,237,0.1); border: 1px solid rgba(124,58,237,0.3); border-radius: 12px; padding: 20px; margin: 20px 0;">
+                <div style="font-size: 14px; color: #94a3b8; margin-bottom: 4px;">Donation Amount</div>
+                <div style="font-size: 32px; font-weight: 900; color: #a78bfa;">₹{amount:,.0f}</div>
+                <div style="font-size: 14px; color: #94a3b8; margin-top: 8px;">Campaign: <strong style="color: #e2e8f0;">{campaign_title}</strong></div>
+              </div>
+              <p style="color: #94a3b8; font-size: 14px;">
+                Your generosity makes real change happen. You can download your receipt from the
+                <a href="{campaign_url}" style="color: #a78bfa;">My Donations</a> page.
+              </p>
+              <a href="{campaign_url}" style="
+                display: inline-block; background: linear-gradient(135deg, #7c3aed, #a78bfa);
+                color: white; padding: 14px 28px; border-radius: 10px;
+                text-decoration: none; font-weight: 700; margin-top: 16px;
+              ">View Campaign →</a>
+              <p style="color: #64748b; margin-top: 32px; font-size: 13px;">
+                ThankGiving — connecting causes with communities.
+              </p>
+            </div>
+            """,
+        })
+        logger.info(f"Donation confirmation email sent to {donor_email}")
+    except Exception as e:
+        logger.error(f"Failed to send donation confirmation email: {e}")
+
+
 async def send_application_status_email(
     volunteer_email: str,
     volunteer_name: str,

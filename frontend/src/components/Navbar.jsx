@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '../store/authStore'
+import NotificationsBell from './NotificationsBell.jsx'
 
 const navLinks = [
   { to: '/campaigns',   label: 'Campaigns'   },
@@ -12,9 +13,23 @@ const navLinks = [
   { to: '/leaderboard', label: '🏆 Board'    },
 ]
 
+// ── Simple theme toggle — persisted to localStorage ──────────────────────────
+function useTheme() {
+  const [theme, setTheme] = useState(() => localStorage.getItem('tg-theme') || 'dark')
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('tg-theme', theme)
+  }, [theme])
+
+  const toggle = () => setTheme(t => t === 'dark' ? 'light' : 'dark')
+  return { theme, toggle }
+}
+
 function Navbar() {
   const [scrolled, setScrolled]     = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const { theme, toggle }           = useTheme()
 
   const user      = useAuthStore(s => s.user)
   const isLoggedIn = useAuthStore(s => s.isLoggedIn)
@@ -78,8 +93,27 @@ function Navbar() {
           ))}
         </ul>
 
-        {/* Desktop Auth Buttons */}
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }} className="desktop-nav">
+        {/* Desktop Auth + Utility Buttons */}
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }} className="desktop-nav">
+
+          {/* Theme toggle */}
+          <button
+            id="theme-toggle"
+            onClick={toggle}
+            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            style={{
+              background: 'transparent', border: 'none', cursor: 'pointer',
+              fontSize: '1.1rem', padding: '6px', borderRadius: '8px',
+              color: 'var(--color-text-muted)', transition: 'color 0.2s', lineHeight: 1,
+            }}
+          >
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </button>
+
+          {/* Notifications bell — only when logged in */}
+          {isLoggedIn() && <NotificationsBell />}
+
           {isLoggedIn() ? (
             <>
               <Link to="/profile" style={{
@@ -162,6 +196,9 @@ function Navbar() {
                   <Link to="/profile" style={{ display: 'block', padding: '0.75rem 1rem', borderRadius: '10px', textDecoration: 'none', fontWeight: 500, color: 'var(--color-text-muted)' }}>
                     👤 Profile
                   </Link>
+                  <button onClick={toggle} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', width: '100%', textAlign: 'left', padding: '0.75rem 1rem', borderRadius: '10px', background: 'none', border: 'none', fontWeight: 500, color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: '1rem' }}>
+                    {theme === 'dark' ? '☀️' : '🌙'} {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                  </button>
                   <button onClick={handleLogout} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '0.75rem 1rem', borderRadius: '10px', background: 'none', border: 'none', fontWeight: 500, color: '#f87171', cursor: 'pointer', fontSize: '1rem' }}>
                     🚪 Logout
                   </button>

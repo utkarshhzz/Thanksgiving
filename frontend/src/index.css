@@ -8,6 +8,7 @@
 /* CSS Variables are declared inside :root — meaning they're
    available globally across every element in the app */
 :root {
+
   /* ── Color Palette ── */
   /* Primary: Deep violet-purple — premium, trustworthy */
   --color-primary:        #7c3aed;
@@ -86,6 +87,18 @@
   --transition-base:   250ms ease;
   --transition-slow:   400ms ease;
   --transition-spring: 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ── Light Mode overrides — activated by data-theme="light" on <html> ── */
+[data-theme="light"] {
+  --color-bg:             #f8f7ff;
+  --color-bg-card:        #ffffff;
+  --color-bg-elevated:    #ede9fe;
+  --color-text:           #1e1b4b;
+  --color-text-muted:     #4c1d95;
+  --color-text-faint:     #7c3aed;
+  --color-border:         rgba(124, 58, 237, 0.15);
+  --color-border-glow:    rgba(124, 58, 237, 0.4);
 }
 
 /* ═══════════════════════════════════════════════════════════

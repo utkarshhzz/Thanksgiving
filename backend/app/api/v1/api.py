@@ -20,6 +20,8 @@ from app.api.v1.routers.updates import router as updates_router
 from app.api.v1.routers.leaderboard import router as leaderboard_router
 from app.api.v1.routers.badges import router as badges_router
 from app.api.v1.routers.receipts import router as receipts_router
+from app.api.v1.routers.public_stats import router as public_stats_router
+from app.api.v1.routers.notifications import router as notifications_router
 
 api_router = APIRouter()
 
@@ -39,4 +41,6 @@ api_router.include_router(ai_router)          # /ai/campaigns/improve, /ai/users
 api_router.include_router(updates_router)     # /campaigns/{id}/updates
 api_router.include_router(leaderboard_router) # /leaderboard/donors, /leaderboard/volunteers
 api_router.include_router(badges_router)      # /users/me/badges, /users/{id}/badges
-api_router.include_router(receipts_router)    # /donations/{id}/receipt
+api_router.include_router(receipts_router)      # /donations/{id}/receipt
+api_router.include_router(public_stats_router)  # /stats — public aggregate counts
+api_router.include_router(notifications_router) # /users/me/notifications, /notifications/{id}/read

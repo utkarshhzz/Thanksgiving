@@ -75,6 +75,34 @@ async def create_donation(
     await db.refresh(donation)
     await db.refresh(campaign)
 
+    # ── Fire in-app notification to donor ────────────────────────────────────
+    try:
+        from app.api.v1.routers.notifications import create_notification
+        await create_notification(
+            db=db,
+            user_id=current_user.id,
+            title=f"Donation confirmed — ₹{float(donation_data.amount):,.0f}",
+            body=f"Your donation to '{campaign.title}' has been recorded. Thank you! 💜",
+            icon="💜",
+            link=f"/campaigns/{campaign.id}",
+        )
+    except Exception:
+        pass
+
+    # ── Send donation confirmation email to donor ─────────────────────────────
+    try:
+        import asyncio
+        from app.services.email_service import send_donation_confirmation
+        asyncio.create_task(send_donation_confirmation(
+            donor_email=current_user.email,
+            donor_name=current_user.first_name or current_user.email.split("@")[0],
+            campaign_title=campaign.title,
+            amount=float(donation_data.amount),
+            campaign_url=f"{settings.FRONTEND_URL}/campaigns/{campaign.id}",
+        ))
+    except Exception:
+        pass
+
     # ── P1: Fire "campaign fully funded" email when goal hit ─────────────────
     just_completed = (
         not campaign.is_flexible_funding
@@ -87,7 +115,6 @@ async def create_donation(
             from app.models.organization import Organization
             org = await db.get(Organization, campaign.organization_id)
             if org:
-                # Get org owner's email
                 owner = await db.get(type(current_user), org.owner_id)
                 if owner:
                     campaign_url = f"{settings.FRONTEND_URL}/campaigns/{campaign.id}"
@@ -98,6 +125,18 @@ async def create_donation(
                         total_raised=float(campaign.raised_amount or 0),
                         campaign_url=campaign_url,
                     ))
+            # In-app notification for org owner
+            if org:
+                owner = await db.get(type(current_user), org.owner_id)
+                if owner:
+                    await create_notification(
+                        db=db,
+                        user_id=owner.id,
+                        title=f"🎉 '{campaign.title}' is fully funded!",
+                        body=f"Your campaign raised ₹{float(campaign.raised_amount or 0):,.0f}. Congratulations!",
+                        icon="🎉",
+                        link=f"/campaigns/{campaign.id}",
+                    )
         except Exception:
             pass  # email failure must NEVER break the donation transaction
 

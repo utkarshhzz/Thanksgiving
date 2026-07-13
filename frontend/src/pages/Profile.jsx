@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import Navbar from '../components/Navbar.jsx'
 import ImageUpload from '../components/ImageUpload.jsx'
 import { authApi } from '../api/auth'
+import api from '../api/client'
 import { useAuthStore } from '../store/authStore'
 
 const AVATAR_COLORS = ['#7c3aed', '#10b981', '#f59e0b', '#3b82f6', '#ec4899']
@@ -19,6 +20,7 @@ function Profile() {
   const [loading, setLoading]               = useState(true)
   const [editing, setEditing]               = useState(false)
   const [showAvatarUpload, setShowAvatarUpload] = useState(false)
+  const [badges, setBadges]                 = useState([])
   const updateUserStore = useAuthStore(s => s.updateUser)
   const storeUser       = useAuthStore(s => s.user)
 
@@ -37,6 +39,8 @@ function Profile() {
       })
       .catch(() => toast.error('Could not load profile.'))
       .finally(() => setLoading(false))
+    // Load badges separately — non-blocking
+    api.get('/users/me/badges').then(res => setBadges(res.data)).catch(() => {})
   }, [])
 
   const onSave = async (data) => {
@@ -258,6 +262,46 @@ function Profile() {
             </div>
           </motion.form>
         )}
+
+        {/* ── Badges shelf ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+          className="card"
+          style={{ marginTop: '1.5rem' }}
+        >
+          <h2 style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1.1rem', marginBottom: '1.25rem' }}>
+            🏅 My Badges
+          </h2>
+          {badges.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-muted)' }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🌱</div>
+              <p style={{ fontSize: '0.88rem' }}>No badges yet — donate or volunteer to earn your first one!</p>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '0.75rem' }}>
+              {badges.map((badge, i) => (
+                <motion.div key={badge.id || i}
+                  initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: i * 0.05 }}
+                  style={{
+                    background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.2)',
+                    borderRadius: '14px', padding: '1rem', textAlign: 'center',
+                  }}
+                >
+                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>{badge.icon || '🏅'}</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.82rem', marginBottom: '0.2rem' }}>{badge.name}</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--color-text-faint)' }}>{badge.description}</div>
+                  {badge.earned_at && (
+                    <div style={{ fontSize: '0.68rem', color: 'var(--color-text-faint)', marginTop: '0.4rem' }}>
+                      {new Date(badge.earned_at).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
+                    </div>
+                  )}
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </motion.div>
+
       </div>
     </motion.div>
   )

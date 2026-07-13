@@ -93,7 +93,7 @@ function AdminDashboard() {
         const [statsRes, usersRes, campaignsRes, donationsRes] = await Promise.all([
           api.get('/admin/stats'),
           api.get('/admin/users?limit=50'),
-          api.get('/admin/campaigns/recent?limit=20'),
+          api.get('/admin/campaigns?limit=50'),
           api.get('/admin/donations/recent?limit=20'),
         ])
         setStats(statsRes.data)
@@ -131,6 +131,16 @@ function AdminDashboard() {
       await api.patch(`/admin/users/${userId}/make-admin`)
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, user_type: 'admin' } : u))
       toast.success(`${email} is now an admin!`)
+    } catch { toast.error('Action failed.') }
+  }
+
+  const handleCampaignStatus = async (campaignId, title, newStatus) => {
+    const label = newStatus === 'active' ? 'approve' : 'reject'
+    if (!window.confirm(`Are you sure you want to ${label} "${title}"?`)) return
+    try {
+      await api.patch(`/admin/campaigns/${campaignId}/status`, { status: newStatus, note: `Admin ${label}d` })
+      setCampaigns(prev => prev.map(c => c.id === campaignId ? { ...c, status: newStatus } : c))
+      toast.success(`Campaign "${title}" ${label}d!`)
     } catch { toast.error('Action failed.') }
   }
 
@@ -263,15 +273,40 @@ function AdminDashboard() {
         {/* CAMPAIGNS TAB */}
         {activeTab === 'campaigns' && (
           <>
-            <SectionTitle>Recent Campaigns ({campaigns.length})</SectionTitle>
+            <SectionTitle>All Campaigns ({campaigns.length})</SectionTitle>
             <DataTable
-              columns={['Title', 'Status', 'Goal (₹)', 'Raised (₹)', 'Created']}
+              columns={['Title', 'Status', 'Goal (₹)', 'Raised (₹)', 'Created', 'Actions']}
               rows={campaigns.map(c => [
-                c.title,
-                <Badge text={c.status} color={c.status === 'active' ? '#10b981' : c.status === 'draft' ? '#6b7280' : '#f59e0b'} />,
-                fmt(c.goal),
-                fmt(c.raised),
+                <span style={{ fontWeight: 600 }}>{c.title}</span>,
+                <Badge text={c.status} color={
+                  c.status === 'active'    ? '#10b981' :
+                  c.status === 'draft'     ? '#6b7280' :
+                  c.status === 'completed' ? '#3b82f6' :
+                  c.status === 'rejected'  ? '#ef4444' : '#f59e0b'
+                } />,
+                fmt(c.target_amount || 0),
+                fmt(c.raised_amount || 0),
                 fmtDate(c.created_at),
+                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                  {c.status !== 'active' && (
+                    <button onClick={() => handleCampaignStatus(c.id, c.title, 'active')}
+                      style={{ padding: '3px 10px', fontSize: '0.72rem', borderRadius: '6px', background: 'rgba(16,185,129,0.1)', color: '#34d399', border: '1px solid rgba(16,185,129,0.2)', cursor: 'pointer', fontWeight: 600 }}>
+                      ✅ Approve
+                    </button>
+                  )}
+                  {c.status !== 'rejected' && (
+                    <button onClick={() => handleCampaignStatus(c.id, c.title, 'rejected')}
+                      style={{ padding: '3px 10px', fontSize: '0.72rem', borderRadius: '6px', background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.2)', cursor: 'pointer', fontWeight: 600 }}>
+                      ❌ Reject
+                    </button>
+                  )}
+                  {c.status !== 'archived' && (
+                    <button onClick={() => handleCampaignStatus(c.id, c.title, 'archived')}
+                      style={{ padding: '3px 10px', fontSize: '0.72rem', borderRadius: '6px', background: 'rgba(255,255,255,0.05)', color: 'var(--color-text-muted)', border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer', fontWeight: 600 }}>
+                      📦 Archive
+                    </button>
+                  )}
+                </div>,
               ])}
               emptyMsg="No campaigns yet."
             />
