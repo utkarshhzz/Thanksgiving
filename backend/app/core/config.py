@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     
     # Google OAuth
     GOOGLE_CLIENT_ID: str = ""
+    # Comma-separated emails that are auto-promoted to ADMIN on Google login
+    # Example in .env:  GOOGLE_ADMIN_EMAILS=you@gmail.com,partner@gmail.com
+    GOOGLE_ADMIN_EMAILS: str = ""
 
     # Cloudinary image uploads
     CLOUDINARY_CLOUD_NAME: str = ""

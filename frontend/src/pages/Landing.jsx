@@ -1,14 +1,10 @@
-// useEffect for GSAP scroll animations
-// useRef to reference DOM elements
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-
-// motion.div: an animatable <div>
-// useInView: returns true when element enters the viewport (scroll-triggered)
 import { motion, useInView } from 'framer-motion'
 
 import Navbar from '../components/Navbar.jsx'
 import HeroCanvas from '../components/HeroCanvas.jsx'
+import Footer from '../components/Footer.jsx'
 import api from '../api/client'
 
 // ── Reusable: animated counter (e.g., "0" → "10,000") ──────────
@@ -316,6 +312,11 @@ function Landing() {
       </section>
 
       {/* ════════════════════════════════════════════════
+          TRENDING CAMPAIGNS SECTION
+      ════════════════════════════════════════════════ */}
+      <TrendingSection />
+
+      {/* ════════════════════════════════════════════════
           FINAL CTA SECTION
       ════════════════════════════════════════════════ */}
       <section style={{
@@ -346,19 +347,84 @@ function Landing() {
         </motion.div>
       </section>
 
-      {/* ── Footer ── */}
-      <footer style={{
-        borderTop: '1px solid var(--color-border)',
-        padding: '2rem 1.5rem',
-        textAlign: 'center',
-        color: 'var(--color-text-faint)',
-        fontSize: '0.85rem',
-      }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <p>© 2026 ThankGiving · Built with ❤️ for social good · India</p>
-        </div>
-      </footer>
+      <Footer />
     </motion.div>
+  )
+}
+
+// ── Trending Campaigns Section ──────────────────────────────────────
+function TrendingSection() {
+  const [campaigns, setCampaigns] = useState([])
+  const [loading, setLoading]     = useState(true)
+
+  useEffect(() => {
+    api.get('/campaigns/trending?limit=6').then(res => {
+      setCampaigns(res.data || [])
+    }).catch(() => {}).finally(() => setLoading(false))
+  }, [])
+
+  if (loading || campaigns.length === 0) return null
+
+  return (
+    <section style={{ padding: '6rem 1.5rem', background: 'rgba(124,58,237,0.03)' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+        <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+          style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '99px', padding: '0.3rem 1rem', marginBottom: '1rem' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#f87171', letterSpacing: '0.06em', textTransform: 'uppercase' }}>🔥 Trending Now</span>
+          </div>
+          <h2 style={{ fontSize: 'clamp(1.8rem,3.5vw,2.8rem)', fontFamily: 'var(--font-heading)', fontWeight: 800, marginBottom: '0.75rem' }}>
+            Campaigns Gaining <span className="text-gradient">Momentum</span>
+          </h2>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '1rem', maxWidth: '480px', margin: '0 auto' }}>
+            These campaigns are raising the most right now. Be part of the movement.
+          </p>
+        </motion.div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(300px,1fr))', gap: '1.5rem' }}>
+          {campaigns.map((c, i) => {
+            const pct = Math.min(Math.round((parseFloat(c.raised_amount || 0) / parseFloat(c.target_amount || 1)) * 100), 100)
+            const daysLeft = c.end_date ? Math.max(0, Math.ceil((new Date(c.end_date) - Date.now()) / 86400000)) : null
+            return (
+              <motion.div key={c.id}
+                initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.07 }}
+                whileHover={{ y: -5, transition: { duration: 0.2 } }}
+                style={{ background: 'rgba(15,15,35,0.8)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '18px', overflow: 'hidden', backdropFilter: 'blur(20px)' }}
+              >
+                {c.image_url
+                  ? <img src={c.image_url} alt={c.title} style={{ width: '100%', height: '150px', objectFit: 'cover' }} />
+                  : <div style={{ height: '150px', background: 'linear-gradient(135deg,rgba(124,58,237,0.3),rgba(245,158,11,0.1))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem' }}>💜</div>
+                }
+                <div style={{ padding: '1.25rem' }}>
+                  {daysLeft !== null && daysLeft <= 7 && daysLeft > 0 && (
+                    <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#f87171', background: 'rgba(239,68,68,0.12)', padding: '2px 8px', borderRadius: '99px', marginBottom: '0.6rem', display: 'inline-block' }}>🔥 {daysLeft}d left</span>
+                  )}
+                  <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '0.98rem', lineHeight: 1.3, marginBottom: '0.75rem' }}>
+                    {c.title}
+                  </h3>
+                  {/* Progress bar */}
+                  <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '99px', height: '5px', marginBottom: '0.5rem', overflow: 'hidden' }}>
+                    <motion.div initial={{ width: 0 }} whileInView={{ width: `${pct}%` }} viewport={{ once: true }} transition={{ duration: 1, delay: i * 0.07 + 0.3 }}
+                      style={{ height: '100%', background: 'linear-gradient(90deg,#7c3aed,#a78bfa)', borderRadius: '99px' }} />
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: 'var(--color-text-muted)', marginBottom: '1rem' }}>
+                    <span><strong style={{ color: '#a78bfa' }}>₹{parseFloat(c.raised_amount || 0).toLocaleString('en-IN')}</strong> raised</span>
+                    <span>{pct}%</span>
+                  </div>
+                  <Link to={`/campaigns/${c.id}`} style={{ display: 'block', textAlign: 'center', padding: '0.55rem', borderRadius: '10px', background: 'rgba(124,58,237,0.18)', color: '#a78bfa', textDecoration: 'none', fontWeight: 600, fontSize: '0.85rem', border: '1px solid rgba(124,58,237,0.25)' }}>
+                    Donate Now →
+                  </Link>
+                </div>
+              </motion.div>
+            )
+          })}
+        </div>
+
+        <div style={{ textAlign: 'center', marginTop: '3rem' }}>
+          <Link to="/campaigns" className="btn btn-outline">View All Campaigns →</Link>
+        </div>
+      </div>
+    </section>
   )
 }
 

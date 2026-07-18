@@ -22,9 +22,17 @@ from app.api.v1.routers.badges import router as badges_router
 from app.api.v1.routers.receipts import router as receipts_router
 from app.api.v1.routers.public_stats import router as public_stats_router
 from app.api.v1.routers.notifications import router as notifications_router
+from app.api.v1.routers.comments import router as comments_router
+from app.api.v1.routers.saved_campaigns import router as saved_campaigns_router
+from app.api.v1.routers.trending import router as trending_router
+from app.api.v1.routers.reviews import router as reviews_router
+from app.api.v1.routers.org_follow import router as org_follow_router
+from app.api.v1.routers.volunteer_certificate import router as cert_router
 
 api_router = APIRouter()
 
+# Trending/ending-soon must come before campaigns_router to avoid path conflicts
+api_router.include_router(trending_router)         # /campaigns/trending, /campaigns/ending-soon
 api_router.include_router(auth_router)
 api_router.include_router(campaigns_router)
 api_router.include_router(donations_router)
@@ -35,12 +43,17 @@ api_router.include_router(impact_router)
 api_router.include_router(in_kind_router)
 api_router.include_router(organizations_router)
 api_router.include_router(spaces_router)
-api_router.include_router(users_me_router)   # /users/me, /users/me/donations, /users/me/avatar
-api_router.include_router(admin_router)       # /admin/stats, /admin/users, etc.
-api_router.include_router(ai_router)          # /ai/campaigns/improve, /ai/users/me/impact
-api_router.include_router(updates_router)     # /campaigns/{id}/updates
-api_router.include_router(leaderboard_router) # /leaderboard/donors, /leaderboard/volunteers
-api_router.include_router(badges_router)      # /users/me/badges, /users/{id}/badges
-api_router.include_router(receipts_router)      # /donations/{id}/receipt
-api_router.include_router(public_stats_router)  # /stats — public aggregate counts
-api_router.include_router(notifications_router) # /users/me/notifications, /notifications/{id}/read
+api_router.include_router(users_me_router)         # /users/me, /users/me/donations, /users/me/avatar
+api_router.include_router(admin_router)            # /admin/stats, /admin/users, etc.
+api_router.include_router(ai_router)               # /ai/campaigns/improve, /ai/users/me/impact
+api_router.include_router(updates_router)          # /campaigns/{id}/updates
+api_router.include_router(leaderboard_router)      # /leaderboard/donors, /leaderboard/volunteers
+api_router.include_router(badges_router)           # /users/me/badges, /users/{id}/badges
+api_router.include_router(receipts_router)         # /donations/{id}/receipt
+api_router.include_router(public_stats_router)     # /stats — public aggregate counts
+api_router.include_router(notifications_router)    # /users/me/notifications, /notifications/{id}/read
+api_router.include_router(comments_router)         # /campaigns/{id}/comments
+api_router.include_router(saved_campaigns_router)  # /campaigns/{id}/save, /users/me/saved
+api_router.include_router(reviews_router)          # /spaces/{id}/reviews
+api_router.include_router(org_follow_router)       # /organizations/{id}/follow, /users/me/feed
+api_router.include_router(cert_router)             # /users/me/volunteer-certificate

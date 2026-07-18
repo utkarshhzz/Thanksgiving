@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 
 import Navbar from '../components/Navbar.jsx'
+import Footer from '../components/Footer.jsx'
 import { spacesApi } from '../api/spaces'
 import { useAuthStore } from '../store/authStore'
 
@@ -190,6 +191,7 @@ function MyBookings() {
             })}
           </div>
         )}
+      <Footer />
       </div>
     </motion.div>
   )

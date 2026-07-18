@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 
 import Navbar from '../components/Navbar.jsx'
+import Footer from '../components/Footer.jsx'
 import { volunteerApi } from '../api/volunteering'
 import { useAuthStore } from '../store/authStore'
 
@@ -217,6 +218,7 @@ function Volunteer() {
             {filtered.map((o, i) => <OpportunityCard key={o.id} opp={o} index={i} />)}
           </div>
         )}
+      <Footer />
       </div>
     </motion.div>
   )

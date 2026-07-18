@@ -31,7 +31,7 @@ function Register() {
 
       const { access_token, user } = regRes.data
       login(access_token, user)
-      navigate('/dashboard')
+      navigate('/onboarding')  // Show onboarding wizard for new users
 
     } catch (err) {
       const msg = err.response?.data?.error?.message

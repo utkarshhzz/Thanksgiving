@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 
 import Navbar from '../components/Navbar.jsx'
+import Footer from '../components/Footer.jsx'
 import { useAuthStore } from '../store/authStore'
 import { campaignApi } from '../api/campaigns'
 import { volunteerApi } from '../api/volunteering'
@@ -443,6 +444,7 @@ useEffect(() => { loadAiImpact() }, [])
         </motion.div>
 
       </div>
+      <Footer />
     </motion.div>
   )
 }

@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 
-import Landing         from './pages/landing.jsx'
+import Landing         from './pages/Landing.jsx'
 import Login           from './pages/Login.jsx'
 import Register        from './pages/Register.jsx'
 import Dashboard       from './pages/Dashboard.jsx'
@@ -23,6 +23,11 @@ import AdminDashboard  from './pages/AdminDashboard.jsx'
 import OrgProfile      from './pages/OrgProfile.jsx'
 import Leaderboard     from './pages/Leaderboard.jsx'
 import NotFound        from './pages/NotFound.jsx'
+import About           from './pages/About.jsx'
+import Contact         from './pages/Contact.jsx'
+import Terms           from './pages/Terms.jsx'
+import Privacy         from './pages/Privacy.jsx'
+import Onboarding      from './pages/Onboarding.jsx'
 import ProtectedRoute  from './components/ProtectedRoute.jsx'
 
 function App() {
@@ -31,9 +36,13 @@ function App() {
       <AnimatePresence mode="wait">
         <Routes>
           {/* ── Public ── */}
-          <Route path="/"         element={<Landing />} />
-          <Route path="/login"    element={<Login />} />
+          <Route path="/"        element={<Landing />} />
+          <Route path="/login"   element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/about"   element={<About />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/terms"   element={<Terms />} />
+          <Route path="/privacy" element={<Privacy />} />
 
           {/* ── Campaigns ── */}
           <Route path="/campaigns"           element={<Campaigns />} />
@@ -58,13 +67,14 @@ function App() {
           <Route path="/spaces/:id"      element={<SpaceDetail />} />
 
           {/* ── Community ── */}
-          <Route path="/leaderboard"          element={<Leaderboard />} />
-          <Route path="/organizations/:id"    element={<OrgProfile />} />
+          <Route path="/leaderboard"       element={<Leaderboard />} />
+          <Route path="/organizations/:id" element={<OrgProfile />} />
 
           {/* ── Protected ── */}
-          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/profile"   element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-          <Route path="/admin"     element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/dashboard"   element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/profile"     element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          <Route path="/admin"       element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/onboarding"  element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
 
           {/* ── 404 ── */}
           <Route path="*" element={<NotFound />} />

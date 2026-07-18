@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import toast from 'react-hot-toast'
 import Navbar from '../components/Navbar.jsx'
+import Footer from '../components/Footer.jsx'
 import api from '../api/client'
 import { useAuthStore } from '../store/authStore'
 
@@ -11,6 +13,9 @@ export default function OrgProfile() {
   const [campaigns, setCampaigns] = useState([])
   const [opps, setOpps]           = useState([])
   const [loading, setLoading]     = useState(true)
+  const [following, setFollowing] = useState(false)
+  const [followerCount, setFollowerCount] = useState(0)
+  const [followLoading, setFollowLoading] = useState(false)
 
   const isLoggedIn = useAuthStore(s => s.isLoggedIn)
 
@@ -23,9 +28,18 @@ export default function OrgProfile() {
           api.get('/opportunities', { params: { limit: 6 } }),
         ])
         setOrg(orgRes.data)
-        // Filter to this org's campaigns/opportunities
         setCampaigns(campRes.data.filter(c => c.organization_id === id))
         setOpps(oppRes.data.filter(o => o.organization_id === id))
+
+        // Follower count (public)
+        api.get(`/organizations/${id}/followers/count`)
+          .then(r => setFollowerCount(r.data.count || 0)).catch(() => {})
+
+        // Follow status (logged-in only)
+        if (isLoggedIn()) {
+          api.get(`/organizations/${id}/follow/status`)
+            .then(r => setFollowing(r.data.following || false)).catch(() => {})
+        }
       } catch {
         setOrg(null)
       } finally {
@@ -33,7 +47,26 @@ export default function OrgProfile() {
       }
     }
     load()
-  }, [id])
+  }, [id, isLoggedIn])
+
+  const handleFollow = async () => {
+    if (!isLoggedIn()) { toast.error('Log in to follow organizations'); return }
+    setFollowLoading(true)
+    try {
+      if (following) {
+        await api.delete(`/organizations/${id}/follow`)
+        setFollowing(false)
+        setFollowerCount(p => Math.max(0, p - 1))
+        toast.success('Unfollowed')
+      } else {
+        await api.post(`/organizations/${id}/follow`)
+        setFollowing(true)
+        setFollowerCount(p => p + 1)
+        toast.success('Following! 💜')
+      }
+    } catch { toast.error('Could not update follow') }
+    finally { setFollowLoading(false) }
+  }
 
   if (loading) return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -102,6 +135,24 @@ export default function OrgProfile() {
                     padding: '2px 10px', borderRadius: '99px', fontSize: '0.72rem',
                     fontWeight: 700, background: `${typeColor}20`, color: typeColor,
                   }}>✓ Verified</span>
+                )}
+              </div>
+              {/* Follow button + count */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
+                <button onClick={handleFollow} disabled={followLoading}
+                  style={{
+                    padding: '0.4rem 1.2rem', borderRadius: '99px', fontSize: '0.85rem', fontWeight: 700,
+                    cursor: 'pointer', transition: 'all 0.2s',
+                    background: following ? 'rgba(124,58,237,0.2)' : 'rgba(124,58,237,0.85)',
+                    border: `1px solid ${following ? '#7c3aed' : 'transparent'}`,
+                    color: following ? '#a78bfa' : 'white', opacity: followLoading ? 0.7 : 1,
+                  }}>
+                  {followLoading ? '...' : following ? '✓ Following' : '+ Follow'}
+                </button>
+                {followerCount > 0 && (
+                  <span style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>
+                    {followerCount.toLocaleString('en-IN')} follower{followerCount !== 1 ? 's' : ''}
+                  </span>
                 )}
               </div>
 
@@ -258,6 +309,7 @@ export default function OrgProfile() {
           </div>
         )}
       </div>
+      <Footer />
     </motion.div>
   )
 }

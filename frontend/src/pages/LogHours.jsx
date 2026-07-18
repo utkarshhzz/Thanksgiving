@@ -6,6 +6,7 @@ import { QRCodeSVG } from 'qrcode.react'
 import toast from 'react-hot-toast'
 
 import Navbar from '../components/Navbar.jsx'
+import Footer from '../components/Footer.jsx'
 import { volunteerApi } from '../api/volunteering'
 import { useAuthStore } from '../store/authStore'
 
@@ -423,6 +424,7 @@ function LogHours() {
             )}
           </div>
         </div>
+      <Footer />
       </div>
     </motion.div>
   )

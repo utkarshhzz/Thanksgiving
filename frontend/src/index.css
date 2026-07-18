@@ -397,3 +397,21 @@ img, video { max-width: 100%; display: block; }
 
   .mobile-nav-toggle { display: flex !important; }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   UTILITY ANIMATIONS & EXTRAS
+═══════════════════════════════════════════════════════════ */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
+.btn-sm {
+  padding: 0.4rem 1rem !important;
+  font-size: 0.82rem !important;
+}
+
+/* Ensure --color-text-faint is always available */
+:root {
+  --color-text-faint: rgba(148, 163, 184, 0.45);
+}

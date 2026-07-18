@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useForm } from 'react-hook-form'
 
 import Navbar from '../components/Navbar.jsx'
+import Footer from '../components/Footer.jsx'
 import { spacesApi } from '../api/spaces'
 import { useAuthStore } from '../store/authStore'
 
@@ -173,6 +174,7 @@ function Spaces() {
             {filtered.map((s, i) => <SpaceCard key={s.id} space={s} index={i} />)}
           </div>
         )}
+      <Footer />
       </div>
     </motion.div>
   )

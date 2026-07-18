@@ -1,10 +1,13 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useForm } from 'react-hook-form'
+import toast from 'react-hot-toast'
 
 import Navbar from '../components/Navbar.jsx'
+import Footer from '../components/Footer.jsx'
 import { spacesApi } from '../api/spaces'
+import api from '../api/client'
 import { useAuthStore } from '../store/authStore'
 
 // ── Booking modal ────────────────────────────────────────────────
@@ -255,18 +258,128 @@ function SpaceDetail() {
             </p>
           </motion.div>
         )}
+
+        <SpaceReviews spaceId={id} />
       </div>
 
-      <AnimatePresence>
-        {showBooking && (
-          <BookingModal
-            space={space}
-            onClose={() => setShowBooking(false)}
-            onSuccess={() => { setShowBooking(false); setBooked(true) }}
-          />
-        )}
-      </AnimatePresence>
+      <Footer />
     </motion.div>
+  )
+}
+
+// ── Space Reviews Section ─────────────────────────────────────────
+function SpaceReviews({ spaceId }) {
+  const [reviews, setReviews]     = useState([])
+  const [summary, setSummary]     = useState({ avg_rating: 0, total_reviews: 0 })
+  const [rating, setRating]       = useState(5)
+  const [reviewBody, setReviewBody] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const isLoggedIn = useAuthStore(s => s.isLoggedIn)
+  const navigate   = useNavigate()
+
+  const loadReviews = useCallback(async () => {
+    if (!spaceId) return
+    try {
+      const [rList, rSum] = await Promise.all([
+        api.get(`/spaces/${spaceId}/reviews`),
+        api.get(`/spaces/${spaceId}/reviews/summary`),
+      ])
+      setReviews(rList.data || [])
+      setSummary(rSum.data || {})
+    } catch {}
+  }, [spaceId])
+
+  useEffect(() => { loadReviews() }, [loadReviews])
+
+  const handleSubmitReview = async e => {
+    e.preventDefault()
+    if (!isLoggedIn()) { navigate('/login'); return }
+    if (!reviewBody.trim()) return
+    setSubmitting(true)
+    try {
+      await api.post(`/spaces/${spaceId}/reviews`, { rating, body: reviewBody.trim() })
+      setReviewBody('')
+      setRating(5)
+      await loadReviews()
+      toast.success('Review submitted! ⭐')
+    } catch (err) {
+      const msg = err.response?.data?.detail || 'Could not submit review'
+      toast.error(msg)
+    } finally { setSubmitting(false) }
+  }
+
+  const stars = (n) => '★'.repeat(n) + '☆'.repeat(5 - n)
+
+  return (
+    <div style={{ maxWidth: '800px', margin: '2rem auto', padding: '0 1.5rem 4rem' }}>
+      <div style={{ background: 'rgba(15,15,35,0.8)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '20px', padding: '2rem', backdropFilter: 'blur(20px)' }}>
+        {/* Summary */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '1.75rem', flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 900, fontSize: '3rem', color: '#f59e0b', lineHeight: 1 }}>{summary.avg_rating || '—'}</div>
+            <div style={{ color: '#f59e0b', fontSize: '1.2rem', marginTop: '0.25rem' }}>{stars(Math.round(summary.avg_rating || 0))}</div>
+          </div>
+          <div>
+            <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1.1rem' }}>Guest Reviews</div>
+            <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>{summary.total_reviews || 0} review{summary.total_reviews !== 1 ? 's' : ''}</div>
+          </div>
+        </div>
+
+        {/* Write review */}
+        <form onSubmit={handleSubmitReview} style={{ marginBottom: '2rem', padding: '1.25rem', background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.12)', borderRadius: '14px' }}>
+          <h4 style={{ fontWeight: 700, marginBottom: '0.75rem', fontSize: '0.95rem' }}>Leave a Review</h4>
+          {/* Star picker */}
+          <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '0.75rem' }}>
+            {[1,2,3,4,5].map(n => (
+              <button key={n} type="button" onClick={() => setRating(n)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.6rem', color: n <= rating ? '#f59e0b' : 'rgba(255,255,255,0.2)', padding: '0 2px', transition: 'color 0.15s' }}>
+                ★
+              </button>
+            ))}
+          </div>
+          <textarea placeholder={isLoggedIn() ? 'Share your experience...' : 'Log in to write a review'}
+            disabled={!isLoggedIn()} rows={3} value={reviewBody} onChange={e => setReviewBody(e.target.value)}
+            style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--color-text)', fontSize: '0.9rem', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit', outline: 'none', marginBottom: '0.75rem' }}
+          />
+          {isLoggedIn() && (
+            <button type="submit" className="btn btn-primary btn-sm" disabled={submitting || !reviewBody.trim()} style={{ opacity: submitting || !reviewBody.trim() ? 0.6 : 1 }}>
+              {submitting ? 'Posting...' : 'Submit Review'}
+            </button>
+          )}
+        </form>
+
+        {/* Review list */}
+        {reviews.length === 0 ? (
+          <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '1.5rem' }}>
+            <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⭐</div>
+            <p style={{ fontSize: '0.88rem' }}>No reviews yet. Be the first to share your experience!</p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {reviews.map((r, i) => (
+              <motion.div key={r.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+                style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem', flexWrap: 'wrap', gap: '0.4rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'linear-gradient(135deg,#f59e0b,#7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 700, color: 'white', flexShrink: 0 }}>
+                      {(r.reviewer_name || '?')[0].toUpperCase()}
+                    </div>
+                    <div>
+                      <span style={{ fontWeight: 700, fontSize: '0.88rem' }}>{r.reviewer_name}</span>
+                      <div style={{ color: '#f59e0b', fontSize: '0.85rem' }}>{stars(r.rating)}</div>
+                    </div>
+                  </div>
+                  <span style={{ fontSize: '0.74rem', color: 'var(--color-text-faint)' }}>
+                    {new Date(r.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </span>
+                </div>
+                {r.body && <p style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', lineHeight: 1.6, margin: 0 }}>{r.body}</p>}
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   )
 }
 

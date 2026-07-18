@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useForm } from 'react-hook-form'
 
 import Navbar from '../components/Navbar.jsx'
+import Footer from '../components/Footer.jsx'
 import { inKindApi } from '../api/inkind'
 import { useAuthStore } from '../store/authStore'
 

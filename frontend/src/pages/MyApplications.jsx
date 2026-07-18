@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 
 import Navbar from '../components/Navbar.jsx'
+import Footer from '../components/Footer.jsx'
 import { volunteerApi } from '../api/volunteering'
 
 const STATUS_CONFIG = {
@@ -147,6 +148,7 @@ function MyApplications() {
             })}
           </div>
         )}
+      <Footer />
       </div>
     </motion.div>
   )

@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import toast from 'react-hot-toast'
 
 import Navbar from '../components/Navbar.jsx'
+import Footer from '../components/Footer.jsx'
 import { campaignApi } from '../api/campaigns'
+import api from '../api/client'
 import { useAuthStore } from '../store/authStore'
 
 // ── Progress bar component ───────────────────────────────────────
@@ -31,13 +34,16 @@ function ProgressBar({ raised, goal, color = '#7c3aed' }) {
 }
 
 // ── Single campaign card ─────────────────────────────────────────
-function CampaignCard({ campaign, index }) {
-  const raised   = campaign.total_raised ?? 0
-  const goal     = campaign.goal_amount  ?? 1
+function CampaignCard({ campaign, index, savedIds = new Set(), onSaveToggle }) {
+  const raised   = campaign.total_raised ?? campaign.raised_amount ?? 0
+  const goal     = campaign.goal_amount ?? campaign.target_amount ?? 1
   const pct      = Math.min(Math.round((raised / goal) * 100), 100)
   const daysLeft = campaign.end_date
     ? Math.max(0, Math.ceil((new Date(campaign.end_date) - Date.now()) / 86400000))
     : null
+  const isEndingSoon = daysLeft !== null && daysLeft <= 7 && daysLeft > 0
+  const isSaved = savedIds.has(campaign.id)
+  const isLoggedIn = useAuthStore(s => s.isLoggedIn)
 
   const statusColor = {
     active:    '#10b981',
@@ -100,8 +106,8 @@ function CampaignCard({ campaign, index }) {
       )}
 
       <div style={{ padding: '1.5rem', flexGrow: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-        {/* Status + type badges */}
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+        {/* Status + type + ending-soon badges */}
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
           <span style={{
             padding:      '2px 10px',
             borderRadius: '99px',
@@ -124,6 +130,15 @@ function CampaignCard({ campaign, index }) {
               color:        'var(--color-text-muted)',
             }}>
               {campaign.campaign_type.replace('_', ' ')}
+            </span>
+          )}
+          {isEndingSoon && (
+            <span style={{
+              padding: '2px 10px', borderRadius: '99px', fontSize: '0.7rem', fontWeight: 700,
+              background: 'rgba(239,68,68,0.15)', color: '#f87171',
+              animation: 'pulse 1.5s ease-in-out infinite',
+            }}>
+              🔥 {daysLeft}d left
             </span>
           )}
         </div>
@@ -176,27 +191,48 @@ function CampaignCard({ campaign, index }) {
           </div>
         </div>
 
-        {/* Footer: days left + button */}
+        {/* Footer: days left + save + view button */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '0.5rem' }}>
-          <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>
+          <span style={{ color: isEndingSoon ? '#f87171' : 'var(--color-text-muted)', fontSize: '0.8rem', fontWeight: isEndingSoon ? 600 : 400 }}>
             {daysLeft !== null ? (daysLeft > 0 ? `${daysLeft} days left` : 'Ended') : ''}
           </span>
-          <Link
-            to={`/campaigns/${campaign.id}`}
-            style={{
-              padding:      '0.4rem 1rem',
-              borderRadius: '99px',
-              fontSize:     '0.8rem',
-              fontWeight:   600,
-              background:   'rgba(124, 58, 237, 0.2)',
-              color:        'var(--color-primary-light)',
-              border:       '1px solid rgba(124, 58, 237, 0.3)',
-              textDecoration: 'none',
-              transition:   'all 0.2s',
-            }}
-          >
-            View →
-          </Link>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            {/* Save button */}
+            <button
+              onClick={async e => {
+                e.preventDefault()
+                if (!isLoggedIn()) { toast.error('Log in to save campaigns'); return }
+                onSaveToggle && onSaveToggle(campaign.id, isSaved)
+              }}
+              title={isSaved ? 'Remove from saved' : 'Save campaign'}
+              style={{
+                background: 'transparent', border: 'none', cursor: 'pointer',
+                fontSize: '1.1rem', padding: '4px', lineHeight: 1,
+                color: isSaved ? '#ef4444' : 'var(--color-text-faint)',
+                transition: 'color 0.2s, transform 0.15s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.2)' }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}
+            >
+              {isSaved ? '❤️' : '🤍'}
+            </button>
+            <Link
+              to={`/campaigns/${campaign.id}`}
+              style={{
+                padding:      '0.4rem 1rem',
+                borderRadius: '99px',
+                fontSize:     '0.8rem',
+                fontWeight:   600,
+                background:   'rgba(124, 58, 237, 0.2)',
+                color:        'var(--color-primary-light)',
+                border:       '1px solid rgba(124, 58, 237, 0.3)',
+                textDecoration: 'none',
+                transition:   'all 0.2s',
+              }}
+            >
+              View →
+            </Link>
+          </div>
         </div>
       </div>
     </motion.div>
@@ -211,8 +247,32 @@ function Campaigns() {
   const [search, setSearch]       = useState('')
   const [typeFilter, setTypeFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [savedIds, setSavedIds]   = useState(new Set())
 
   const isOrgUser  = useAuthStore(s => s.isOrgUser)
+  const isLoggedIn = useAuthStore(s => s.isLoggedIn)
+
+  // Load saved campaign IDs for logged-in users
+  useEffect(() => {
+    if (!isLoggedIn()) return
+    api.get('/users/me/saved').then(res => {
+      setSavedIds(new Set(res.data.map(c => c.id)))
+    }).catch(() => {})
+  }, [isLoggedIn])
+
+  const handleSaveToggle = async (campaignId, currentlySaved) => {
+    try {
+      if (currentlySaved) {
+        await api.delete(`/campaigns/${campaignId}/save`)
+        setSavedIds(prev => { const s = new Set(prev); s.delete(campaignId); return s })
+        toast.success('Removed from saved')
+      } else {
+        await api.post(`/campaigns/${campaignId}/save`)
+        setSavedIds(prev => new Set([...prev, campaignId]))
+        toast.success('Campaign saved ❤️')
+      }
+    } catch { toast.error('Could not save campaign') }
+  }
 
   // Fetch with current filters — server-side search
   useEffect(() => {
@@ -374,11 +434,13 @@ function Campaigns() {
             gap: '1.5rem',
           }}>
             {campaigns.map((c, i) => (
-              <CampaignCard key={c.id} campaign={c} index={i} />
+              <CampaignCard key={c.id} campaign={c} index={i}
+                savedIds={savedIds} onSaveToggle={handleSaveToggle} />
             ))}
           </div>
         )}
       </div>
+      <Footer />
     </motion.div>
   )
 }

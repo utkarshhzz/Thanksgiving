@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 
 import Navbar from '../components/Navbar.jsx'
+import Footer from '../components/Footer.jsx'
 import ImageUpload from '../components/ImageUpload.jsx'
 import { authApi } from '../api/auth'
 import api from '../api/client'
@@ -302,7 +303,33 @@ function Profile() {
           )}
         </motion.div>
 
+        {/* Volunteer Certificate download */}
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+          style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.15)', borderRadius: '18px', padding: '1.75rem', marginTop: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1.05rem', marginBottom: '0.3rem' }}>🏆 Volunteer Certificate</h3>
+              <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', margin: 0 }}>Download an official PDF certificate of your volunteer service.</p>
+            </div>
+            <a
+              href={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/users/me/volunteer-certificate`}
+              target="_blank" rel="noopener noreferrer"
+              onClick={e => {
+                // Attach auth token to the download request
+                const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token')
+                if (!token) { e.preventDefault(); toast.error('Please log in to download your certificate'); return }
+              }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.4rem', borderRadius: '10px', background: 'rgba(16,185,129,0.2)', border: '1px solid rgba(16,185,129,0.3)', color: '#34d399', textDecoration: 'none', fontWeight: 700, fontSize: '0.9rem', transition: 'all 0.2s' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(16,185,129,0.35)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(16,185,129,0.2)' }}
+            >
+              📄 Download PDF
+            </a>
+          </div>
+        </motion.div>
+
       </div>
+      <Footer />
     </motion.div>
   )
 }

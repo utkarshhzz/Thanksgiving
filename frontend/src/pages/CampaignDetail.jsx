@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'react-hot-toast'
 
 import Navbar from '../components/Navbar.jsx'
+import Footer from '../components/Footer.jsx'
 import { campaignApi } from '../api/campaigns'
 import { aiApi } from '../api/ai'
 import api from '../api/client'
@@ -497,6 +498,14 @@ function CampaignDetail() {
         </motion.div>
       </div>
 
+      {/* ── Comments section ── */}
+      <div style={{ maxWidth: '800px', margin: '2rem auto', padding: '0 1.5rem 4rem' }}>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+          style={{ background: 'rgba(15,15,35,0.8)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '20px', padding: '2rem', backdropFilter: 'blur(20px)' }}>
+          <CommentsSection campaignId={campaign?.id} />
+        </motion.div>
+      </div>
+
       {/* Donate modal */}
       <AnimatePresence>
         {showDonate && (
@@ -513,6 +522,118 @@ function CampaignDetail() {
         )}
       </AnimatePresence>
     </motion.div>
+  )
+}
+
+// ── Comments section component ───────────────────────────────────────
+function CommentsSection({ campaignId }) {
+  const [comments, setComments] = useState([])
+  const [body, setBody]         = useState('')
+  const [loading, setLoading]   = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const isLoggedIn = useAuthStore(s => s.isLoggedIn)
+  const user       = useAuthStore(s => s.user)
+  const navigate   = useNavigate()
+
+  const loadComments = useCallback(async () => {
+    if (!campaignId) return
+    setLoading(true)
+    try {
+      const res = await api.get(`/campaigns/${campaignId}/comments?limit=30`)
+      setComments(res.data)
+    } catch {}
+    finally { setLoading(false) }
+  }, [campaignId])
+
+  useEffect(() => { loadComments() }, [loadComments])
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    if (!isLoggedIn()) { navigate('/login'); return }
+    if (!body.trim()) return
+    setSubmitting(true)
+    try {
+      await api.post(`/campaigns/${campaignId}/comments`, { body: body.trim() })
+      setBody('')
+      await loadComments()
+      toast.success('Comment posted!')
+    } catch { toast.error('Failed to post comment') }
+    finally { setSubmitting(false) }
+  }
+
+  const handleDelete = async (id) => {
+    try {
+      await api.delete(`/comments/${id}`)
+      setComments(prev => prev.filter(c => c.id !== id))
+    } catch { toast.error('Could not delete comment') }
+  }
+
+  return (
+    <div>
+      <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1.1rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        💬 Discussion
+        {comments.length > 0 && <span style={{ fontSize: '0.75rem', background: 'rgba(124,58,237,0.2)', color: '#a78bfa', padding: '2px 10px', borderRadius: '99px', fontWeight: 700 }}>{comments.length}</span>}
+      </h3>
+
+      {/* Comment form */}
+      <form onSubmit={handleSubmit} style={{ marginBottom: '1.5rem' }}>
+        <textarea
+          placeholder={isLoggedIn() ? 'Share your thoughts or ask a question...' : 'Log in to leave a comment'}
+          disabled={!isLoggedIn()}
+          value={body}
+          onChange={e => setBody(e.target.value)}
+          rows={3}
+          style={{ width: '100%', padding: '0.85rem 1rem', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--color-text)', fontSize: '0.9rem', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit', outline: 'none' }}
+        />
+        {isLoggedIn() && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+            <button type="submit" className="btn btn-primary btn-sm" disabled={submitting || !body.trim()}
+              style={{ opacity: submitting || !body.trim() ? 0.6 : 1 }}>
+              {submitting ? 'Posting...' : 'Post Comment'}
+            </button>
+          </div>
+        )}
+      </form>
+
+      {/* Comments list */}
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-muted)' }}>Loading comments...</div>
+      ) : comments.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-muted)' }}>
+          <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>💭</div>
+          <p style={{ fontSize: '0.88rem' }}>No comments yet. Be the first to start the discussion!</p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {comments.map((c, i) => (
+            <motion.div key={c.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
+              style={{ display: 'flex', gap: '0.85rem', padding: '1rem', background: c.is_pinned ? 'rgba(124,58,237,0.08)' : 'rgba(255,255,255,0.02)', borderRadius: '12px', border: c.is_pinned ? '1px solid rgba(124,58,237,0.2)' : '1px solid rgba(255,255,255,0.04)' }}>
+              {/* Avatar */}
+              <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#10b981)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', fontWeight: 700, color: 'white', flexShrink: 0 }}>
+                {(c.author_name || '?')[0].toUpperCase()}
+              </div>
+              <div style={{ flexGrow: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem', flexWrap: 'wrap', gap: '0.4rem' }}>
+                  <span style={{ fontWeight: 700, fontSize: '0.88rem' }}>{c.author_name}</span>
+                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.74rem', color: 'var(--color-text-faint)' }}>
+                      {new Date(c.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                    {user && c.author_id === user.id && (
+                      <button onClick={() => handleDelete(c.id)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '0.75rem', padding: 0 }}>
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <p style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', lineHeight: 1.6, margin: 0 }}>{c.body}</p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 
